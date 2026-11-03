@@ -1,0 +1,68 @@
+# Retrains the model every Sunday, re-runs all walk-forward tests, rebuilds the
+# report, commits the results, and publishes the report to GitHub Pages.
+# You can also run it any time: Actions tab -> "Weekly retrain" -> Run workflow.
+name: Weekly retrain
+
+on:
+  schedule:
+    - cron: "17 14 * * 0"     # Sundays 14:17 UTC (about 9-10 AM Eastern)
+  workflow_dispatch:           # adds a "Run workflow" button
+
+permissions:
+  contents: write              # needed to commit the new model + report
+
+concurrency:
+  group: repo-writer           # never run at the same time as the daily job
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install packages
+        run: pip install -r requirements.txt
+
+      # Keep earnings dates between runs (fewer Yahoo requests, less rate-limiting).
+      - uses: actions/cache@v4
+        with:
+          path: data/cache/earnings
+          key: earnings-${{ github.run_id }}
+          restore-keys: earnings-
+
+      - name: Train + walk-forward test
+        run: python train.py
+
+      - name: Commit model and report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for f in models docs REPORT.md; do [ -e "$f" ] && git add "$f"; done
+          git diff --cached --quiet || git commit -m "Weekly retrain $(date -u +%F)"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Package report for GitHub Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs
+
+  deploy-pages:
+    needs: train
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

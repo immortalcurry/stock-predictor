@@ -1,0 +1,59 @@
+# Runs after each US market close: makes predictions, appends them to
+# paper_log.csv, scores old predictions, and commits LATEST.md + the log.
+name: Daily predictions
+
+on:
+  schedule:
+    # GitHub cron uses UTC and doesn't know about daylight saving time.
+    # 21:30 UTC = 4:30 PM Eastern in winter (EST) and 5:30 PM in summer (EDT).
+    # GitHub often starts scheduled jobs 5-30 minutes late; that's normal.
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repo-writer
+  cancel-in-progress: false
+
+jobs:
+  predict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install packages
+        run: pip install -r requirements.txt
+
+      # Keep earnings dates between runs (fewer Yahoo requests, less rate-limiting).
+      - uses: actions/cache@v4
+        with:
+          path: data/cache/earnings
+          key: earnings-${{ github.run_id }}
+          restore-keys: earnings-
+
+      - name: Train first if there is no model yet
+        run: |
+          if [ ! -f models/model.joblib ]; then python train.py; fi
+
+      - name: Predict
+        run: python predict.py
+
+      - name: Score older predictions
+        run: python score_log.py
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for f in LATEST.md paper_log.csv models docs REPORT.md; do [ -e "$f" ] && git add "$f"; done
+          git diff --cached --quiet || git commit -m "Predictions $(date -u +%F)"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

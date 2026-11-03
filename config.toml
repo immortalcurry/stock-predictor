@@ -1,0 +1,49 @@
+# =============================================================================
+# config.toml: edit this file to change tickers or settings.
+# You can edit it right in the GitHub app or website. The next scheduled run
+# picks up your changes.
+# =============================================================================
+
+[universe]
+# Your holdings. They are listed first in every output.
+holdings = ["NBIS", "CRWV"]
+
+# Prediction targets. All groups are pooled into ONE model, so it has more
+# training examples. Add or remove tickers freely.
+memory = ["MU", "WDC", "STX", "SNDK"]
+semis = ["NVDA", "AMD", "AVGO", "TSM", "ASML", "AMAT", "LRCX", "KLAC", "MRVL",
+         "INTC", "QCOM", "ARM", "ON", "TXN"]
+ai_infra = ["NBIS", "CRWV", "SMCI", "DELL", "ANET", "VRT", "ORCL", "IREN"]
+big_tech = ["MSFT", "GOOGL", "AMZN", "META", "AAPL"]
+
+[context]
+# Market context. These are used as FEATURES only and are never predicted.
+tickers = ["SPY", "QQQ", "SMH", "SOXX", "^VIX"]
+fred_series = "DGS10"   # 10-year Treasury yield, from FRED's free CSV endpoint
+
+[data]
+years = 15                    # how much daily history to download
+cache_dir = "data/cache"      # local cache (not committed to git)
+cache_max_age_hours = 12      # re-download if the cache is older than this
+short_history_days = 504      # fewer trading days than this (about 2 years) gets a "limited history" flag
+
+# Use only data on/after these dates for a ticker.
+# NBIS: the history before 2024-10-21 is the old Yandex and must be excluded.
+# CRWV/SNDK: start dates are set explicitly so an old, unrelated ticker's
+# history can never leak in (the old SanDisk traded as SNDK until 2016).
+[data.start_overrides]
+NBIS = "2024-10-21"
+CRWV = "2025-03-28"
+SNDK = "2025-02-13"
+
+[model]
+horizon = 5                   # predict the 5-trading-day forward return
+gap_days = 5                  # purge gap between train and test (stops label leakage)
+first_test_date = "2016-01-04"  # walk-forward testing starts here (earlier data is training only)
+fold_days = 63                # each test period is about one quarter (63 trading days)
+min_train_years = 3
+
+[backtest]
+threshold = 0.55              # hold a stock for the week only if P(up) > this
+cost_per_trade = 0.001        # 0.1% charged on every buy and every sell
+thresholds_to_test = [0.50, 0.52, 0.55, 0.58, 0.60]
