@@ -56,12 +56,21 @@ def confidence_note(p, verdict_level, earnings_week, short, stale):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--synthetic", action="store_true")
+    ap.add_argument("--check-model", action="store_true",
+                    help="exit with an error if there is no model or it's from an older code version")
     args = ap.parse_args()
     cfg = load_config()
     path = ROOT / "models" / "model.joblib"
     if not path.exists():
         raise SystemExit("No trained model found. Run `python train.py` first.")
     b = joblib.load(path)
+    # A model saved by an older version of this code lacks the newer parts.
+    from stockpred.features import FEATURES
+    if "quantile_1d" not in b["models"] or b["features"] != FEATURES:
+        raise SystemExit("The saved model is from an older version. Run `python train.py` to retrain.")
+    if args.check_model:
+        print("Model is up to date.")
+        return
 
     if args.synthetic:
         from stockpred.synthetic import make_synthetic
@@ -181,8 +190,8 @@ def write_latest_md(out, b, asof, synthetic):
                      f"{r['earnings']} | {r['note']} |")
     lines += ["", f"Average P(up) across all stocks: **{out['p_up'].mean():.0%}**.", ""]
     if exps:
-        lines += ["**How much to trust \"beats peers\"** (chance the stock does better than the average "
-                  "of ~100 chip/tech stocks):", ""]
+        lines += ["**How much to trust \"beats peers\"** (chance the stock does better than the typical "
+                  "stock among ~100 chip/tech names):", ""]
         for name, label in [("rel_5", "1 week"), ("rel_20", "1 month")]:
             if name in exps:
                 lines.append(f"- {label}: {exps[name]['label']}")

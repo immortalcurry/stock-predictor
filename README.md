@@ -5,7 +5,7 @@ big-tech stocks:
 
 - **Price estimates:** likely low / middle / high for **tomorrow's close** and for the close **in 1 week**
 - **Direction:** P(up), the probability the stock is higher in 5 trading days
-- **Ranking:** P(beats peers), the probability the stock does better than the average of ~100 chip/tech stocks
+- **Ranking:** P(beats peers), the probability the stock does better than the typical stock among ~100 chip/tech names
 - **Size:** a range of 10th / 50th / 90th percentiles, e.g. "-5% to +7%, middle +1%"
 
 It runs entirely on GitHub Actions, so you don't need a laptop. You read the results on your phone:

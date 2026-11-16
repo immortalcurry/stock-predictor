@@ -39,9 +39,9 @@ jobs:
           key: earnings-${{ github.run_id }}
           restore-keys: earnings-
 
-      - name: Train first if there is no model yet
+      - name: Train first if there is no model yet (or it is from an older version)
         run: |
-          if [ ! -f models/model.joblib ]; then python train.py; fi
+          if ! python predict.py --check-model; then python train.py; fi
 
       - name: Predict
         run: python predict.py

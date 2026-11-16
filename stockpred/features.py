@@ -238,10 +238,11 @@ def build_panel(prices, earnings, fred, tickers, horizon=5, calendar=None, targe
     panel["rank_vol_20"] = g["vol_20"].rank(pct=True)
     panel["rank_rel_volume"] = g["rel_volume_20"].rank(pct=True)
 
-    # "Beat the peers" targets: the stock's forward return minus the average
+    # "Beat the peers" targets: the stock's forward return minus the MEDIAN
     # forward return of all stocks that day. This strips out the market's move.
+    # (Median, not mean: a few huge movers would otherwise drag the bar around.)
     for h in (5, 20):
-        rel = panel[f"fwd_ret_{h}"] - g[f"fwd_ret_{h}"].transform("mean")
+        rel = panel[f"fwd_ret_{h}"] - g[f"fwd_ret_{h}"].transform("median")
         panel[f"y_rel_{h}"] = (rel > 0).astype(float).where(rel.notna())
     panel["y_up_5"] = panel["y_up"]
     panel["y_up_20"] = (panel["fwd_ret_20"] > 0).astype(float).where(panel["fwd_ret_20"].notna())

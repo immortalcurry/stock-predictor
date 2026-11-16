@@ -4,7 +4,7 @@ print a live scorecard (and add it to LATEST.md).
 
   * weekly predictions are scored once they are 5 trading days old
   * tomorrow's price range is scored after 1 trading day
-  * "beats peers" is scored against the average of the stocks in the log that day
+  * "beats peers" is scored against the median of the stocks in the log that day
 
 This is the REAL test. The backtest can fool you, but predictions written
 down before the fact can't. Give it 4-8 weeks before trusting anything.
@@ -78,12 +78,12 @@ def main():
             log.at[i, "actual_ret_1d"] = round(res[1], 5)
             log.at[i, "in_range_1d"] = int(log.at[i, "q10_1d"] <= res[1] <= log.at[i, "q90_1d"])
 
-        # "Beats peers": compare each stock with that day's average, once every
+        # "Beats peers": compare each stock with that day's median, once every
         # stock logged that day has a weekly result.
         for asof, g in log.groupby("asof_date"):
             if g["actual_ret"].isna().any() or g["p_beat_peers_5d"].isna().all():
                 continue
-            rel = g["actual_ret"] - g["actual_ret"].mean()
+            rel = g["actual_ret"] - g["actual_ret"].median()
             ok = g["p_beat_peers_5d"].notna()
             log.loc[g.index[ok], "beat_peers_correct"] = ((g["p_beat_peers_5d"] > 0.5) == (rel > 0))[ok].astype(int)
         log.to_csv(LOG_PATH, index=False)
