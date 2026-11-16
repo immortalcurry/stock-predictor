@@ -2,7 +2,7 @@
   "primary_name": "Logistic regression",
   "trained_through": "2026-11-06",
   "trained_on": "2026-11-16",
-  "cqr_adj": 0.13510461896329656,
+  "cqr_adj": 0.11385624235262326,
   "short_history": [
     "CRWV",
     "SNDK"
@@ -12,64 +12,203 @@
     "direction": [
       {
         "model": "Baseline: always up",
-        "accuracy": 0.5604263390329521,
+        "accuracy": 0.5604829917139119,
         "auc": 0.5,
-        "brier": 0.24662518506231104
+        "brier": 0.2467445901704423
       },
       {
         "model": "Baseline: last week repeats",
-        "accuracy": 0.5006086513418639,
-        "auc": 0.49332305955489636,
-        "brier": 0.4993913486581361
+        "accuracy": 0.5003679677278674,
+        "auc": 0.49306383973321544,
+        "brier": 0.4996320322721326
       },
       {
         "model": "Baseline: historical average",
-        "accuracy": 0.5600300079266222,
-        "auc": 0.5054351187883486,
-        "brier": 0.24670522146866303
+        "accuracy": 0.5597197993894462,
+        "auc": 0.5051967479785133,
+        "brier": 0.2467068328972124
       },
       {
         "model": "Logistic regression",
-        "accuracy": 0.5417280036235987,
-        "auc": 0.5027161934590756,
-        "brier": 0.24977883380942337
+        "accuracy": 0.5400812254688181,
+        "auc": 0.5086319335511551,
+        "brier": 0.2495037238486709
       },
       {
         "model": "LightGBM",
-        "accuracy": 0.5440493715321029,
-        "auc": 0.4940857112603594,
-        "brier": 0.25056754313957585
+        "accuracy": 0.5434065634539904,
+        "auc": 0.49909504163231394,
+        "brier": 0.2505343338589711
       }
     ],
     "range": [
       {
         "model": "Baseline (volatility only)",
-        "coverage": 0.797531423394859,
-        "median_width": 0.1329721615694453,
-        "pinball": 0.015627702721892164
+        "coverage": 0.7963366768425644,
+        "median_width": 0.1303780444351067,
+        "pinball": 0.015397090057149397
       },
       {
         "model": "LightGBM (raw)",
-        "coverage": 0.7552372324765032,
-        "median_width": 0.11495484674734446,
-        "pinball": 0.015476766147619747
+        "coverage": 0.761965765372874,
+        "median_width": 0.11462311254375473,
+        "pinball": 0.015209568119503405
       },
       {
         "model": "LightGBM (calibrated)",
-        "coverage": 0.7874532895481825,
-        "median_width": 0.1251229894001072,
+        "coverage": 0.7905718491059747,
+        "median_width": 0.12360781846059353,
         "pinball": NaN
       }
-    ]
+    ],
+    "range_1d": [
+      {
+        "model": "Baseline (volatility only)",
+        "coverage": 0.7970998691670301,
+        "median_width": 0.05549746274542648
+      },
+      {
+        "model": "LightGBM (raw)",
+        "coverage": 0.7817678805058875,
+        "median_width": 0.05094557135892361
+      },
+      {
+        "model": "LightGBM (calibrated)",
+        "coverage": 0.7919619494112516,
+        "median_width": 0.05247160057150152
+      }
+    ],
+    "experiments": {
+      "up_5": {
+        "desc": "Up or down, 1 week (the original question)",
+        "best": "p_logit",
+        "dev": {
+          "n": 59118,
+          "accuracy": 0.5418485063770764,
+          "naive": 0.5628065902094117,
+          "auc": 0.5079992593785705,
+          "auc_lo": 0.48879760908372455,
+          "auc_hi": 0.5224999280569065,
+          "ic": 0.01757964539860875,
+          "ic_t": 2.08821370568605,
+          "top_excess": -0.032008654710829365,
+          "top_sharpe": -0.21199109509950925
+        },
+        "exam": {
+          "n": 14258,
+          "accuracy": 0.5327535418712301,
+          "naive": 0.5508486463739655,
+          "auc": 0.5097009134696977,
+          "auc_lo": 0.4783165281850919,
+          "auc_hi": 0.5345872647126516,
+          "ic": -0.0013891923565866862,
+          "ic_t": -0.05132489311266682,
+          "top_excess": -0.13319848925230435,
+          "top_sharpe": -0.5032308157669888
+        },
+        "level": "no_edge",
+        "label": "No edge"
+      },
+      "rel_5": {
+        "desc": "Beats its peers, 1 week",
+        "best": "p_logit",
+        "dev": {
+          "n": 59118,
+          "accuracy": 0.5136844954159477,
+          "naive": 0.509929293954464,
+          "auc": 0.5196651733252445,
+          "auc_lo": 0.5132523435116684,
+          "auc_hi": 0.5270667148315816,
+          "ic": 0.04846471735175604,
+          "ic_t": 5.72664699234101,
+          "top_excess": 0.14970113597574372,
+          "top_sharpe": 0.7594276986926554
+        },
+        "exam": {
+          "n": 14258,
+          "accuracy": 0.5026651704306354,
+          "naive": 0.5105204095946135,
+          "auc": 0.512001393854399,
+          "auc_lo": 0.496279926321728,
+          "auc_hi": 0.5302336626567035,
+          "ic": 0.030677550521378442,
+          "ic_t": 1.6173773124420712,
+          "top_excess": 0.03179492839578704,
+          "top_sharpe": 0.10719774299696423
+        },
+        "level": "confirmed",
+        "label": "Small edge: passed development AND the final exam"
+      },
+      "up_20": {
+        "desc": "Up or down, 1 month",
+        "best": "p_logit",
+        "dev": {
+          "n": 59118,
+          "accuracy": 0.5667309448898813,
+          "naive": 0.6105077979633953,
+          "auc": 0.5048061270579267,
+          "auc_lo": 0.4697614419031952,
+          "auc_hi": 0.5388188453309485,
+          "ic": 0.012711341948360537,
+          "ic_t": 0.86716937580465,
+          "top_excess": -0.06228131200620603,
+          "top_sharpe": -0.4215693081819245
+        },
+        "exam": {
+          "n": 13793,
+          "accuracy": 0.5790618429638222,
+          "naive": 0.5802943522076416,
+          "auc": 0.5238744205371835,
+          "auc_lo": 0.45281935598539513,
+          "auc_hi": 0.5952077723077406,
+          "ic": -0.016166715093696587,
+          "ic_t": -0.18426464174012935,
+          "top_excess": 0.05133460105934023,
+          "top_sharpe": 0.18592686416230841
+        },
+        "level": "no_edge",
+        "label": "No edge"
+      },
+      "rel_20": {
+        "desc": "Beats its peers, 1 month",
+        "best": "p_logit",
+        "dev": {
+          "n": 59118,
+          "accuracy": 0.5179133258905917,
+          "naive": 0.5160018945160526,
+          "auc": 0.5244597201548717,
+          "auc_lo": 0.512229484154632,
+          "auc_hi": 0.5373956520945511,
+          "ic": 0.06273299857962025,
+          "ic_t": 3.8990474060493145,
+          "top_excess": 0.0013012634505923204,
+          "top_sharpe": 0.00741339198927416
+        },
+        "exam": {
+          "n": 13793,
+          "accuracy": 0.48473863553976654,
+          "naive": 0.5271514536359023,
+          "auc": 0.4933976308026944,
+          "auc_lo": 0.4740725643473811,
+          "auc_hi": 0.512985924991316,
+          "ic": -0.005903464343490501,
+          "ic_t": -0.35354531968663144,
+          "top_excess": 0.4461672661102339,
+          "top_sharpe": 1.1008758898187316
+        },
+        "level": "failed_exam",
+        "label": "Looked good in development, FAILED the final exam"
+      }
+    }
   },
   "verdict": {
     "level": "no_edge",
     "headline": "No reliable edge. The model is not distinguishable from a coin flip / simple baselines once you account for noise.",
     "details": [
-      "Out-of-sample accuracy 54.2% vs 56.0% for simply guessing 'up' every time (difference -1.9%, 90% range -2.6% to -1.0%).",
-      "ROC AUC 0.503 (0.5 = no skill; 90% range 0.488-0.518); best simple baseline AUC 0.505.",
+      "Out-of-sample accuracy 54.0% vs 56.0% for simply guessing 'up' every time (difference -2.0%, 90% range -2.9% to -1.0%).",
+      "ROC AUC 0.509 (0.5 = no skill; 90% range 0.494-0.524); best simple baseline AUC 0.505.",
       "The 10-90% range caught the actual move 79% of the time after calibration (target 80%).",
-      "Backtest after costs: 37.3%/yr (Sharpe 1.17) vs 42.7%/yr (Sharpe 1.31) for just holding all the stocks. The rule did NOT beat simply holding the stocks on risk-adjusted terms."
+      "Backtest after costs: 47.0%/yr (Sharpe 1.37) vs 42.0%/yr (Sharpe 1.31) for just holding all the stocks. The rule beat that on risk-adjusted terms."
     ]
   }
 }
