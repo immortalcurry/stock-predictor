@@ -24,6 +24,9 @@ STOCK_FEATURES = [
     "dist_ma50", "dist_ma200", "rel_volume_20",
     "rel_spy_5", "rel_spy_20", "rel_smh_5", "rel_smh_20",
     "days_to_earnings", "earnings_in_week",
+    # Added in v2: what happened at the LAST earnings report, and when the gains came
+    "earn_surprise", "earn_reaction_z", "days_since_earnings",
+    "overnight_5", "intraday_5",
 ]
 RANK_FEATURES = ["rank_ret_5", "rank_ret_20", "rank_ret_60", "rank_vol_20", "rank_rel_volume"]
 MARKET_FEATURES = [
@@ -53,34 +56,68 @@ def trading_calendar(spy_index, extra_days=90):
     return spy_index.append(future)
 
 
-def earnings_features(index, earn, calendar, cap=65):
+def earnings_features(index, earn, calendar, ret1, vol, cap=65):
     """
-    days_to_earnings: trading days from day t until the first trading day whose
-                      price REACTS to the next report (1 = tomorrow).
-    earnings_in_week: 1 if that reaction falls inside the next 5 trading days,
-                      i.e. inside the prediction window.
+    Looking forward (dates are scheduled in advance):
+      days_to_earnings : trading days from day t until the first trading day whose
+                         price REACTS to the next report (1 = tomorrow).
+      earnings_in_week : 1 if that reaction falls inside the next 5 trading days.
+    Looking back (all known by day t's close):
+      days_since_earnings : trading days since the last report's reaction day.
+      earn_surprise       : how much that report beat (+) / missed (-) estimates.
+      earn_reaction_z     : how the stock moved on that reaction day, in units of
+                            its normal daily move. Stocks often keep drifting in
+                            the direction of a big earnings reaction.
 
     Small caveat (also in the README): for past dates we use the actual report
     dates. Companies usually announce these a few weeks ahead, so the lookahead
     is small, but it isn't exactly zero for the "60 days ahead" part.
     """
     n = len(index)
+    out = {"days_to_earnings": np.full(n, np.nan), "earnings_in_week": np.zeros(n),
+           "earn_surprise": np.full(n, np.nan), "earn_reaction_z": np.full(n, np.nan),
+           "days_since_earnings": np.full(n, np.nan)}
     if earn is None or len(earn) == 0:
-        return np.full(n, np.nan), np.zeros(n)
+        return out
     dates = pd.to_datetime(earn["date"]).values
     after = earn["after_close"].astype(bool).values
+    surp = (pd.to_numeric(earn["surprise"], errors="coerce").values
+            if "surprise" in earn else np.full(len(earn), np.nan))
     pos = calendar.searchsorted(dates)              # first trading day >= report date
     on_trading_day = (pos < len(calendar)) & (calendar[np.minimum(pos, len(calendar) - 1)] == dates)
     react = pos + (after & on_trading_day)          # after-close on a trading day: react next day
-    react = np.unique(react[react < len(calendar)])
+    keep = react < len(calendar)
+    react, surp = react[keep], surp[keep]
+    order = np.argsort(react, kind="stable")
+    react, surp = react[order], surp[order]
+    react, first = np.unique(react, return_index=True)
+    surp = surp[first]
 
     t_pos = calendar.get_indexer(index)
-    j = np.searchsorted(react, t_pos, side="right")  # first reaction strictly after t
-    days = np.full(n, np.nan)
+    j = np.searchsorted(react, t_pos, side="right")  # number of reaction days <= t
+
+    # ---- next report ----
     ok = j < len(react)
+    days = np.full(n, np.nan)
     days[ok] = react[j[ok]] - t_pos[ok]
     days = np.minimum(days, cap)
-    return days, ((days >= 1) & (days <= 5)).astype(float)
+    out["days_to_earnings"] = days
+    out["earnings_in_week"] = ((days >= 1) & (days <= 5)).astype(float)
+
+    # ---- last report (its reaction day is <= t, so everything here is known) ----
+    has = j > 0
+    last = react[np.maximum(j - 1, 0)]
+    since = (t_pos - last).astype(float)
+    recent = has & (since <= cap)                    # older than a quarter: treat as unknown
+    out["days_since_earnings"][recent] = since[recent]
+    out["earn_surprise"][recent] = np.clip(surp[np.maximum(j - 1, 0)][recent], -100, 100) / 100
+    # Reaction-day move divided by the PREVIOUS day's volatility estimate
+    row_of_pos = pd.Series(np.arange(n), index=t_pos)
+    rows = row_of_pos.reindex(last).values           # NaN if the stock didn't trade that day
+    z_day = (ret1 / vol.shift(1)).clip(-8, 8).values
+    good = recent & ~np.isnan(rows)
+    out["earn_reaction_z"][good] = z_day[rows[good].astype(int)]
+    return out
 
 
 # ----------------------------------------------------------------------------
@@ -116,6 +153,7 @@ def market_context(prices, fred, cal_index):
 def stock_frame(df, spy_close, smh_close, earn, calendar, horizon=5):
     """Per-stock features plus targets."""
     c = df["Close"].astype(float)
+    o = df["Open"].astype(float)
     v = df["Volume"].astype(float).replace(0, np.nan)
     r1 = c.pct_change()
     f = pd.DataFrame(index=c.index)
@@ -143,7 +181,12 @@ def stock_frame(df, spy_close, smh_close, earn, calendar, horizon=5):
         f[f"rel_spy_{n}"] = f[f"ret_{n}"] - spy.pct_change(n)
         f[f"rel_smh_{n}"] = f[f"ret_{n}"] - smh.pct_change(n)
 
-    f["days_to_earnings"], f["earnings_in_week"] = earnings_features(c.index, earn, calendar)
+    for name, values in earnings_features(c.index, earn, calendar, r1, vol).items():
+        f[name] = values
+
+    # Did the last week's move happen overnight (news, gaps) or during the day?
+    f["overnight_5"] = (o / c.shift(1) - 1).rolling(5).sum()
+    f["intraday_5"] = (c / o - 1).rolling(5).sum()
 
     # ---- Targets (the ONLY place we look forward) ----
     f["close"] = c
@@ -151,12 +194,22 @@ def stock_frame(df, spy_close, smh_close, earn, calendar, horizon=5):
     f["scale"] = vol * SQRT5                      # this stock's "typical" 1-week move
     f["z_target"] = f["fwd_ret"] / f["scale"]     # forward move in units of typical move
     f["y_up"] = (f["fwd_ret"] > 0).astype(float).where(f["fwd_ret"].notna())
+    # Extra horizons: tomorrow (for the 1-day price range) and one month (experiments)
+    f["fwd_ret_1"] = c.shift(-1) / c - 1
+    f["scale_1"] = vol                            # typical 1-day move
+    f["z_target_1"] = f["fwd_ret_1"] / f["scale_1"]
+    f["fwd_ret_5"] = f["fwd_ret"]
+    f["fwd_ret_20"] = c.shift(-20) / c - 1
     f["n_days_history"] = np.arange(1, len(c) + 1)
     return f
 
 
-def build_panel(prices, earnings, fred, targets, horizon=5, calendar=None):
-    """Build the full (date, ticker) panel with features + targets."""
+def build_panel(prices, earnings, fred, tickers, horizon=5, calendar=None, targets=None):
+    """
+    Build the full (date, ticker) panel with features + targets.
+    tickers: every stock used for training (the pool).
+    targets: the stocks we actually report on (default: all of them).
+    """
     spy_idx = prices["SPY"].index
     if calendar is None:
         calendar = trading_calendar(spy_idx)
@@ -165,7 +218,7 @@ def build_panel(prices, earnings, fred, targets, horizon=5, calendar=None):
     smh_c = prices["SMH"]["Close"] if "SMH" in prices else spy_c
 
     frames = []
-    for t in targets:
+    for t in tickers:
         if t not in prices or len(prices[t]) < 25:
             continue
         df = prices[t][prices[t].index.isin(spy_idx)]   # align to market trading days
@@ -184,6 +237,15 @@ def build_panel(prices, earnings, fred, targets, horizon=5, calendar=None):
     panel["rank_ret_60"] = g["ret_60"].rank(pct=True)
     panel["rank_vol_20"] = g["vol_20"].rank(pct=True)
     panel["rank_rel_volume"] = g["rel_volume_20"].rank(pct=True)
+
+    # "Beat the peers" targets: the stock's forward return minus the average
+    # forward return of all stocks that day. This strips out the market's move.
+    for h in (5, 20):
+        rel = panel[f"fwd_ret_{h}"] - g[f"fwd_ret_{h}"].transform("mean")
+        panel[f"y_rel_{h}"] = (rel > 0).astype(float).where(rel.notna())
+    panel["y_up_5"] = panel["y_up"]
+    panel["y_up_20"] = (panel["fwd_ret_20"] > 0).astype(float).where(panel["fwd_ret_20"].notna())
+    panel["is_target"] = panel["ticker"].isin(set(targets) if targets is not None else set(tickers))
 
     panel = panel.merge(ctx, left_on="date", right_index=True, how="left")
     # A row is usable once the stock has enough history for the basic features.

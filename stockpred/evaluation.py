@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss, roc_auc_score
 
-from .models import fit_models, predict_all
+from .models import fit_classifiers, fit_models, predict_all, predict_classifiers
 
 DIRECTION_MODELS = {
     "p_always_up": "Baseline: always up",
@@ -40,11 +40,12 @@ def walk_forward(panel, cfg, verbose=True):
     start_k = max(start_k, int(252 * mc["min_train_years"]))
     fold, gap = mc["fold_days"], mc["gap_days"]
 
-    results, prior_resid = [], []
+    results, prior_resid, prior_resid_1d = [], [], []
     n_folds = int(np.ceil((len(dates) - start_k) / fold))
     for f, i in enumerate(range(start_k, len(dates), fold)):
         train = lab[lab["k"] < i - gap]                 # <-- the purge gap
-        test = lab[(lab["k"] >= i) & (lab["k"] < i + fold)]
+        # Train on the whole pool, but grade only on the stocks we report on.
+        test = lab[(lab["k"] >= i) & (lab["k"] < i + fold) & lab["is_target"]]
         if len(test) == 0:
             continue
         m = fit_models(train)
@@ -55,8 +56,11 @@ def walk_forward(panel, cfg, verbose=True):
         p["cqr_adj"] = float(np.quantile(prior_resid, 0.8)) if len(prior_resid) > 500 else 0.0
         resid = np.maximum(p["q10_z"] - test["z_target"], test["z_target"] - p["q90_z"])
         prior_resid.extend(resid.tolist())
-        results.append(pd.concat([test[["date", "ticker", "date_pos", "fwd_ret", "y_up",
-                                        "scale", "z_target", "n_days_history"]], p], axis=1))
+        p["cqr_adj_1d"] = float(np.quantile(prior_resid_1d, 0.8)) if len(prior_resid_1d) > 500 else 0.0
+        resid1 = np.maximum(p["q10_1d_z"] - test["z_target_1"], test["z_target_1"] - p["q90_1d_z"])
+        prior_resid_1d.extend(resid1.dropna().tolist())
+        results.append(pd.concat([test[["date", "ticker", "date_pos", "fwd_ret", "y_up", "scale",
+                                        "z_target", "n_days_history", "fwd_ret_1", "scale_1"]], p], axis=1))
         if verbose:
             d0, d1 = test["date"].min().date(), test["date"].max().date()
             print(f"  fold {f + 1:>2}/{n_folds}: train {len(train):>7,} rows | test {d0} -> {d1}")
@@ -66,7 +70,14 @@ def walk_forward(panel, cfg, verbose=True):
         oos[c] = oos[c + "_z"] * oos["scale"]
     oos["q10_adj"] = (oos["q10_z"] - oos["cqr_adj"]) * oos["scale"]
     oos["q90_adj"] = (oos["q90_z"] + oos["cqr_adj"]) * oos["scale"]
-    return oos, np.array(prior_resid)
+    # Tomorrow's range
+    oos["bq10_1d"] = oos["bq10_1d_z"] * oos["scale_1"]
+    oos["bq90_1d"] = oos["bq90_1d_z"] * oos["scale_1"]
+    oos["q10_1d"] = oos["q10_1d_z"] * oos["scale_1"]
+    oos["q90_1d"] = oos["q90_1d_z"] * oos["scale_1"]
+    oos["q10_1d_adj"] = (oos["q10_1d_z"] - oos["cqr_adj_1d"]) * oos["scale_1"]
+    oos["q90_1d_adj"] = (oos["q90_1d_z"] + oos["cqr_adj_1d"]) * oos["scale_1"]
+    return oos, np.array(prior_resid), np.array(prior_resid_1d)
 
 
 # ----------------------------------------------------------------------------
@@ -161,6 +172,18 @@ def range_table(oos):
          "coverage": cov("q10_adj", "q90_adj"), "median_width": width("q10_adj", "q90_adj"),
          "pinball": np.nan},
     ]
+    return pd.DataFrame(rows)
+
+
+def range_table_1d(oos):
+    """Same coverage check for tomorrow's range."""
+    y = oos["fwd_ret_1"]
+    rows = []
+    for name, lo, hi in [("Baseline (volatility only)", "bq10_1d", "bq90_1d"),
+                         ("LightGBM (raw)", "q10_1d", "q90_1d"),
+                         ("LightGBM (calibrated)", "q10_1d_adj", "q90_1d_adj")]:
+        rows.append({"model": name, "coverage": float(((y >= oos[lo]) & (y <= oos[hi])).mean()),
+                     "median_width": float((oos[hi] - oos[lo]).median())})
     return pd.DataFrame(rows)
 
 
@@ -275,3 +298,126 @@ def verdict(dir_tab, boot, rng_tab, bt_sum, primary):
            else "The rule did NOT beat simply holding the stocks on risk-adjusted terms."),
     ]
     return v
+
+
+# ----------------------------------------------------------------------------
+# Experiments: "can we ask an easier question?"
+# ----------------------------------------------------------------------------
+EXPERIMENTS = {
+    # name: (label column, forward-return column, horizon in days, description)
+    "up_5": ("y_up_5", "fwd_ret_5", 5, "Up or down, 1 week (the original question)"),
+    "rel_5": ("y_rel_5", "fwd_ret_5", 5, "Beats its peers, 1 week"),
+    "up_20": ("y_up_20", "fwd_ret_20", 20, "Up or down, 1 month"),
+    "rel_20": ("y_rel_20", "fwd_ret_20", 20, "Beats its peers, 1 month"),
+}
+
+
+def walk_forward_clf(panel, cfg, ycol, retcol, horizon, verbose=True):
+    """Walk-forward for one yes/no question. The purge gap equals the horizon."""
+    mc, fold = cfg["model"], cfg["experiments"]["fold_days"]
+    lab = panel[panel[ycol].notna()].copy()
+    dates = np.sort(lab["date_pos"].unique())
+    lab["k"] = lab["date_pos"].map({d: i for i, d in enumerate(dates)})
+    date_of_k = lab.groupby("k")["date"].first()
+    start_k = int(np.searchsorted(date_of_k.values, np.datetime64(mc["first_test_date"])))
+    start_k = max(start_k, int(252 * mc["min_train_years"]))
+    gap = max(mc["gap_days"], horizon)
+    out = []
+    for i in range(start_k, len(dates), fold):
+        train = lab[lab["k"] < i - gap]
+        test = lab[(lab["k"] >= i) & (lab["k"] < i + fold) & lab["is_target"]]
+        if len(test) == 0:
+            continue
+        p = predict_classifiers(fit_classifiers(train, ycol), test)
+        out.append(pd.concat([test[["date", "ticker", "date_pos"]],
+                              test[ycol].rename("y"), test[retcol].rename("ret"), p], axis=1))
+    if verbose:
+        print(f"    {ycol}: {len(out)} folds done")
+    return pd.concat(out).reset_index(drop=True)
+
+
+def _boot_auc(y, p, blocks, n_boot=100, seed=0):
+    rng = np.random.default_rng(seed)
+    ub, inv = np.unique(blocks, return_inverse=True)
+    idx_by_block = pd.Series(np.arange(len(y))).groupby(inv).apply(np.array).values
+    aucs = []
+    for _ in range(n_boot):
+        idx = np.concatenate([idx_by_block[b] for b in rng.integers(0, len(ub), len(ub))])
+        if len(np.unique(y[idx])) > 1:
+            aucs.append(_auc(y[idx], p[idx]))
+    return float(np.quantile(aucs, 0.05)), float(np.quantile(aucs, 0.95))
+
+
+def experiment_metrics(d, pcol, horizon, cost, top_n):
+    """
+    Metrics for one experiment over one time period.
+      accuracy / naive : model accuracy vs always guessing the more common answer
+      auc              : 0.5 = no skill (with a 90% block-bootstrap range)
+      ic               : "information coefficient": each day, do higher-scored
+                         stocks have higher forward returns? (rank correlation,
+                         averaged). 0 = no skill; 0.03+ is considered decent.
+      ic_t             : how many standard errors the IC is from zero (>2 = unlikely luck)
+      top_excess       : yearly return of "hold the top N" minus "hold everything",
+                         after trading costs
+    """
+    if len(d) < 200:
+        return None
+    y, p = d["y"].astype(int).values, d[pcol].values
+    lo, hi = _boot_auc(y, p, d["date_pos"].values // horizon)
+    ic_day = d.groupby("date_pos").apply(lambda g: g[pcol].corr(g["ret"], method="spearman")
+                                         if len(g) >= 8 else np.nan).dropna()
+    ic_blk = ic_day.groupby(ic_day.index // horizon).mean()      # non-overlapping blocks
+    ic_t = ic_blk.mean() / (ic_blk.std() / np.sqrt(len(ic_blk))) if len(ic_blk) > 3 else np.nan
+
+    reb, prev, ex = np.sort(d["date_pos"].unique())[::horizon], set(), []
+    for dp in reb:
+        day = d[d["date_pos"] == dp]
+        if len(day) < 2 * top_n:
+            continue
+        top = day.nlargest(top_n, pcol)
+        held = set(top["ticker"])
+        turnover = len(held ^ prev) / top_n                     # buys + sells, as a fraction
+        ex.append(top["ret"].mean() - day["ret"].mean() - cost * turnover)
+        prev = held
+    ex = pd.Series(ex)
+    per_year = 252 / horizon
+    return {"n": len(d), "accuracy": float(((p > 0.5) == y).mean()),
+            "naive": float(max(y.mean(), 1 - y.mean())),
+            "auc": float(_auc(y, p)), "auc_lo": lo, "auc_hi": hi,
+            "ic": float(ic_day.mean()), "ic_t": float(ic_t),
+            "top_excess": float(ex.mean() * per_year) if len(ex) else np.nan,
+            "top_sharpe": float(ex.mean() / ex.std() * np.sqrt(per_year)) if len(ex) > 3 and ex.std() else np.nan}
+
+
+def run_experiments(panel, cfg, main_oos):
+    """Run every experiment; return {name: result dict}."""
+    ec = cfg["experiments"]
+    split = pd.Timestamp(ec["final_exam_start"])
+    cost, top_n = cfg["backtest"]["cost_per_trade"], ec["top_n"]
+    results = {}
+    for name, (ycol, retcol, h, desc) in EXPERIMENTS.items():
+        if name == "up_5":      # already computed by the main walk-forward: reuse it
+            oos = main_oos.rename(columns={"y_up": "y", "fwd_ret": "ret"})[
+                ["date", "ticker", "date_pos", "y", "ret", "p_logit", "p_lgbm"]]
+        else:
+            oos = walk_forward_clf(panel, cfg, ycol, retcol, h)
+        dev, exam = oos[oos["date"] < split], oos[oos["date"] >= split]
+        # Pick the better model using DEVELOPMENT data only. The final exam is
+        # never used to choose anything.
+        best = max(["p_logit", "p_lgbm"], key=lambda c: _auc(dev["y"].astype(int), dev[c]))
+        md = experiment_metrics(dev, best, h, cost, top_n)
+        me = experiment_metrics(exam, best, h, cost, top_n)
+        if md is None:
+            continue
+        if md["auc"] > 0.65:
+            level, label = "suspicious", "SUSPICIOUS (too good: likely a bug)"
+        elif md["auc_lo"] > 0.5 and md["ic_t"] > 2:
+            if me and me["auc"] > 0.5 and me["ic"] > 0:
+                level, label = "confirmed", "Small edge: passed development AND the final exam"
+            else:
+                level, label = "failed_exam", "Looked good in development, FAILED the final exam"
+        else:
+            level, label = "no_edge", "No edge"
+        results[name] = {"desc": desc, "horizon": h, "ycol": ycol, "best": best,
+                         "dev": md, "exam": me, "level": level, "label": label}
+    return results

@@ -3,7 +3,9 @@
 Predicts the **next 5 trading days** for ~31 memory, semiconductor, AI-infrastructure and
 big-tech stocks:
 
+- **Price estimates:** likely low / middle / high for **tomorrow's close** and for the close **in 1 week**
 - **Direction:** P(up), the probability the stock is higher in 5 trading days
+- **Ranking:** P(beats peers), the probability the stock does better than the average of ~100 chip/tech stocks
 - **Size:** a range of 10th / 50th / 90th percentiles, e.g. "-5% to +7%, middle +1%"
 
 It runs entirely on GitHub Actions, so you don't need a laptop. You read the results on your phone:
@@ -49,7 +51,7 @@ If Claude already pushed it for you, skip this step. Otherwise create a new repo
 ### Step 4: Run it the first time (don't wait for Sunday)
 1. Repo → **Actions** tab. If you see "Workflows aren't being run on this repository",
    tap **I understand my workflows, go ahead and enable them**.
-2. Tap **Weekly retrain** → **Run workflow** → **Run workflow**. It takes ~10-20 minutes.
+2. Tap **Weekly retrain** → **Run workflow** → **Run workflow**. It takes ~30-60 minutes.
    This downloads 15 years of data, runs all the tests, and publishes the report.
 3. When it's green, tap **Daily predictions** → **Run workflow** to get your first `LATEST.md`.
 4. Your report link is shown under **Settings → Pages** ("Your site is live at ...").
@@ -98,7 +100,8 @@ config.toml ──► download (yfinance + FRED, cached) ──► features ─�
 | Relative | return minus SPY's and minus SMH's, over 5 and 20 days |
 | Peer ranks | where the stock's 5/20/60-day return, volatility, and volume rank among all stocks *that day* (0-1) |
 | Market | VIX and its 5-day change, SPY above its 200-day average?, SPY/QQQ/SMH/SOXX returns, 10y-yield change (5 and 20 days) |
-| Earnings | trading days until the next earnings reaction; flag if it falls in the next 5 days |
+| Earnings | trading days until the next earnings reaction; flag if it falls in the next 5 days; last report's surprise, the stock's reaction to it, and days since |
+| Timing | how much of the last week's move happened overnight vs during the day |
 
 **Why volatility-scaling and ranks?** A +10% week is enormous for AAPL and ordinary for IREN.
 Dividing returns by each stock's own volatility (a z-score), and ranking stocks against each
@@ -145,6 +148,20 @@ Whichever direction model has the better walk-forward AUC is used for live predi
   otherwise; pay 0.1% per buy and per sell. It's compared with buy-and-hold **SPY**, **SMH**, and,
   most importantly, **holding all the stocks**. A rule that beats SPY only because chip stocks
   boomed has no skill. It's the universe doing the work.
+
+### Version 2: price estimates and "easier question" experiments
+- **Price estimates.** The % ranges are turned into dollar prices from the last close. A second set of
+  quantile models predicts **tomorrow's** range. Both are checked for 80% coverage in the report.
+- **More training data.** ~70 extra chip/tech stocks (`extra_training` in config.toml) are used for
+  training only. The model is still graded and reported only on your list.
+- **New features.** What happened at the last earnings report (surprise vs estimates, the stock's
+  reaction that day, days since), and whether last week's move happened overnight or during the day.
+- **Experiments.** "Will it go up?" is mostly a bet on the whole market. The report also tests
+  **"will it beat its peers?"** and a **one-month** horizon, with a ranking score (IC) and a
+  "hold the model's top 5" test.
+- **Final exam.** Ideas are developed on data before 2025 and then graded once on 2025 onward.
+  An idea is called an edge only if it passes both, so trying many ideas can't fool us by luck.
+  LATEST.md shows each "beats peers" number with its exam result.
 
 ### Offline self-test
 `python train.py --synthetic` runs the whole pipeline on fake random-walk prices, where the

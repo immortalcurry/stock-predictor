@@ -34,10 +34,11 @@ def make_synthetic(cfg, seed=7):
     prices["^VIX"] = pd.DataFrame({"Open": vix, "High": vix, "Low": vix, "Close": vix,
                                    "Volume": 0.0}, index=idx)
     earnings = {}
-    for t in cfg["targets"]:
+    for t in cfg["pool"]:
         prices[t] = series(rng.uniform(0.8, 1.8), rng.uniform(0.01, 0.035))
         q = pd.date_range(idx[0], idx[-1] + pd.Timedelta(days=90), freq="91D") + pd.Timedelta(days=int(rng.integers(0, 60)))
-        earnings[t] = pd.DataFrame({"date": q, "after_close": True})
+        earnings[t] = pd.DataFrame({"date": q, "after_close": True,
+                                    "surprise": rng.normal(0, 10, len(q))})
     for t, d in cfg["data"]["start_overrides"].items():
         if t in prices:
             prices[t] = prices[t][prices[t].index >= pd.Timestamp(d)]

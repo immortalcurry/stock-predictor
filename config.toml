@@ -16,6 +16,19 @@ semis = ["NVDA", "AMD", "AVGO", "TSM", "ASML", "AMAT", "LRCX", "KLAC", "MRVL",
 ai_infra = ["NBIS", "CRWV", "SMCI", "DELL", "ANET", "VRT", "ORCL", "IREN"]
 big_tech = ["MSFT", "GOOGL", "AMZN", "META", "AAPL"]
 
+# Extra stocks used ONLY to give the model more training examples. They are
+# never shown in LATEST.md. Tickers Yahoo doesn't know are skipped automatically.
+extra_training = [
+  "MCHP", "ADI", "NXPI", "MPWR", "SWKS", "QRVO", "TER", "ENTG", "ONTO", "AMKR",
+  "COHR", "LSCC", "RMBS", "GFS", "UMC", "STM", "ASX", "CRUS", "SLAB", "SYNA",
+  "POWI", "DIOD", "MKSI", "ACLS", "FORM", "CAMT", "NVMI", "ALAB", "CRDO", "MTSI",
+  "SITM", "SMTC", "PSTG", "NTAP", "HPE", "HPQ", "CSCO", "CIEN", "LITE", "GLW",
+  "APH", "TEL", "JBL", "FLEX", "CLS", "IBM", "SNOW", "NOW", "CRM", "ADBE",
+  "PLTR", "NET", "DDOG", "MDB", "PANW", "CRWD", "NFLX", "TSLA", "SNPS", "CDNS",
+  "EQIX", "DLR", "APLD", "CIFR", "CORZ", "WULF", "HUT", "RIOT", "MARA", "GEV",
+  "ETN", "PWR",
+]
+
 [context]
 # Market context. These are used as FEATURES only and are never predicted.
 tickers = ["SPY", "QQQ", "SMH", "SOXX", "^VIX"]
@@ -42,6 +55,14 @@ gap_days = 5                  # purge gap between train and test (stops label le
 first_test_date = "2016-01-04"  # walk-forward testing starts here (earlier data is training only)
 fold_days = 63                # each test period is about one quarter (63 trading days)
 min_train_years = 3
+
+[experiments]
+# "Can we ask an easier question?" experiments, reported side by side.
+# Ideas are developed on data before final_exam_start, then graded ONCE on the
+# data after it. An idea only counts as real if it also passes the final exam.
+final_exam_start = "2025-01-01"
+fold_days = 126               # half-year test folds (keeps the weekly run fast)
+top_n = 5                     # "hold the 5 highest-ranked stocks" test
 
 [backtest]
 threshold = 0.55              # hold a stock for the week only if P(up) > this

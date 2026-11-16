@@ -134,6 +134,41 @@ def build_report(ctx, html_path, md_path, png_path):
     img_imp = chart_importance(imp)
     good = v["level"] in ("tiny_edge", "modest_edge")
 
+    # ---- experiments table ----
+    exps = ctx.get("experiments", {})
+    erows = []
+    for e in exps.values():
+        d, x = e["dev"], e["exam"] or {}
+        erows.append({
+            "question": e["desc"],
+            "model": "LightGBM" if e["best"] == "p_lgbm" else "Logistic",
+            "dev accuracy": f"{d['accuracy']:.1%} (naive {d['naive']:.1%})",
+            "dev AUC": f"{d['auc']:.3f} ({d['auc_lo']:.3f}-{d['auc_hi']:.3f})",
+            "dev ranking IC": f"{d['ic']:+.3f} (t={d['ic_t']:.1f})",
+            "dev top-5 edge/yr": _pct(d["top_excess"]),
+            "exam AUC": f"{x['auc']:.3f}" if x else "n/a",
+            "exam ranking IC": f"{x['ic']:+.3f}" if x else "n/a",
+            "exam top-5 edge/yr": _pct(x["top_excess"]) if x else "n/a",
+            "result": e["label"],
+        })
+    etab = pd.DataFrame(erows).set_index("question") if erows else pd.DataFrame()
+    r1 = ctx["range_1d"].set_index("model") if "range_1d" in ctx else pd.DataFrame()
+    exam_start = ctx.get("exam_start", "")
+    exp_html = f"""<h2>Experiments: can we ask an easier question?</h2>
+<p>"Will it go up?" is mostly a bet on the whole market. These experiments try easier questions:
+<b>will the stock beat the average of its peers</b> (which removes the market's move), and a
+<b>one-month</b> horizon. Each idea is developed on data before {exam_start} ("dev") and then graded once
+on data from {exam_start} onward (the "final exam"). An idea counts only if it passes both.</p>
+<ul><li><b>AUC</b>: 0.50 = no skill (90% range in brackets).</li>
+<li><b>Ranking IC</b>: each day, do the stocks the model scores higher actually do better? 0 = no skill,
++0.03 or more is decent; <i>t</i> above 2 means it's unlikely to be luck.</li>
+<li><b>Top-5 edge/yr</b>: yearly return of holding the model's 5 favourite stocks minus holding all of them,
+after trading costs.</li></ul>
+<div class="scroll">{etab.to_html(border=0, classes="t", escape=True)}</div>""" if erows else ""
+    r1_html = f"""<h3>Tomorrow's range</h3>
+<p class="note">The same check for the 1-day price range shown in LATEST.md.</p>
+<div class="scroll">{_tbl(r1, {'coverage': _pct, 'median_width': _pct})}</div>""" if len(r1) else ""
+
     dt = dir_tab.drop(columns="col").set_index("model")
     rt = rng.set_index("model")
     banner = ("<div class='verdict'><b>SYNTHETIC TEST DATA.</b> These results come from fake random-walk "
@@ -144,7 +179,7 @@ def build_report(ctx, html_path, md_path, png_path):
 <title>Weekly Move Model</title><style>{CSS}</style></head><body><main>
 <h1>Weekly stock-move model: test report</h1>
 <div class="sub">Generated {now} · data through {ctx['data_end']} · {ctx['n_rows']:,} stock-days from
-{ctx['n_tickers']} tickers · walk-forward test {ctx['test_start']} → {ctx['data_end']}</div>
+{ctx['n_tickers']} reported stocks (trained on {ctx.get('n_pool', ctx['n_tickers'])}) · walk-forward test {ctx['test_start']} → {ctx['data_end']}</div>
 {banner}
 <div class="verdict {'good' if good else ''}"><b>Verdict: {html.escape(v['headline'])}</b>
 <ul>{''.join(f'<li>{html.escape(d)}</li>' for d in v['details'])}</ul></div>
@@ -176,6 +211,7 @@ scores the percentile forecasts (lower is better). If LightGBM doesn't beat the 
 the range really comes from "how volatile has this stock been lately".</p>
 <div class="scroll">{_tbl(rt, {'coverage': _pct, 'median_width': _pct, 'pinball': lambda x: '' if pd.isna(x) else f'{x:.5f}'})}</div>
 <p class="note">Coverage by group (calibrated): {', '.join(f'{k} {val:.0%}' for k, val in ctx['coverage_by_group'].items())}</p>
+{r1_html}
 
 <h2>4. Backtest: would trading it have made money?</h2>
 <p>Rule: every week, hold an equal-weight basket of stocks with P(up) &gt; {ctx['threshold']:.0%}; hold cash
@@ -186,6 +222,8 @@ is <b>"hold all stocks"</b>: if the rule only beats SPY, that's just because chi
 <h3>Does the threshold matter?</h3>
 <p class="note">If results swing wildly between nearby thresholds, any "good" result is probably luck.</p>
 <div class="scroll">{_tbl(sweep.set_index('threshold'), {'CAGR': _pct, 'Sharpe': lambda x: f'{x:.2f}', 'Max drawdown': _pct, 'avg stocks held': lambda x: f'{x:.1f}', '% weeks invested': _pct, 'avg weekly cost': lambda x: f'{x:.2%}'})}</div>
+
+{exp_html}
 
 <h2>5. What does the model look at? (feature importance)</h2>
 <p>Share of the tree model's "split gain" by feature. This shows what the model <i>uses</i>, not that the
@@ -239,6 +277,16 @@ are not independent experiments.</li>
     md.append(md_table(dt, {'accuracy': _pct, 'auc': lambda x: f'{x:.3f}', 'brier': lambda x: f'{x:.4f}'}))
     md.append("\n## Ranges (target coverage 80%)\n")
     md.append(md_table(rt, {'coverage': _pct, 'median_width': _pct, 'pinball': lambda x: '' if pd.isna(x) else f'{x:.5f}'}))
+    if len(r1):
+        md.append("\n## Tomorrow's range (target coverage 80%)\n")
+        md.append(md_table(r1, {'coverage': _pct, 'median_width': _pct}))
+    if erows:
+        md.append("\n## Experiments: easier questions\n")
+        md.append(f"Developed on data before {exam_start}; graded once on the final exam ({exam_start} onward).\n")
+        for r in erows:
+            md.append(f"- **{r['question']}**: {r['result']}. Dev AUC {r['dev AUC']}, ranking IC {r['dev ranking IC']}, "
+                      f"top-5 edge {r['dev top-5 edge/yr']}/yr. Final exam: AUC {r['exam AUC']}, IC {r['exam ranking IC']}, "
+                      f"top-5 edge {r['exam top-5 edge/yr']}/yr.")
     md.append("\n## Backtest\n\n![backtest](docs/backtest.png)\n")
     md.append(md_table(bt_sum, {c: _pct for c in ['CAGR', 'Volatility', 'Max drawdown', 'Total return', '% weeks invested']} | {'Sharpe': lambda x: f'{x:.2f}'}))
     md.append("\nFull report with charts: see `docs/report.html` / your GitHub Pages link.\n")

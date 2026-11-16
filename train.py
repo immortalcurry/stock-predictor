@@ -24,7 +24,7 @@ import pandas as pd
 from stockpred.config import ROOT, load_config
 from stockpred import evaluation as ev
 from stockpred.features import FEATURES, build_panel, leak_check
-from stockpred.models import fit_models
+from stockpred.models import fit_classifiers, fit_models
 from stockpred.report import build_report
 
 
@@ -49,21 +49,23 @@ def main():
         from stockpred.data import load_all
         prices, earnings, fred = load_all(cfg, force=args.force_download)
     targets = [t for t in cfg["targets"] if t in prices]
+    pool = [t for t in cfg["pool"] if t in prices]
     missing = sorted(set(cfg["targets"]) - set(targets))
     if missing:
         print(f"   WARNING: no data for {missing}; they are skipped.")
+    print(f"   {len(targets)} stocks to predict, {len(pool) - len(targets)} extra training-only stocks")
 
     # ---------------------------------------------------------- leak check
     print("2) Checking that features use only past data...")
-    ok, leak_msg = leak_check(prices, earnings, fred, targets, horizon)
+    ok, leak_msg = leak_check(prices, earnings, fred, pool, horizon)
     print("   " + leak_msg)
     if not ok:
         raise SystemExit("Leak check FAILED. Fix features.py before trusting anything.")
 
     # ------------------------------------------------------------- features
     print("3) Building features...")
-    panel = build_panel(prices, earnings, fred, targets, horizon)
-    hist_days = panel.groupby("ticker")["n_days_history"].max()
+    panel = build_panel(prices, earnings, fred, pool, horizon, targets=targets)
+    hist_days = panel[panel["is_target"]].groupby("ticker")["n_days_history"].max()
     short = sorted(hist_days[hist_days < cfg["data"]["short_history_days"]].index)
     print(f"   {len(panel):,} rows, {panel['ticker'].nunique()} tickers, "
           f"{panel['date'].min().date()} -> {panel['date'].max().date()}")
@@ -71,7 +73,7 @@ def main():
 
     # --------------------------------------------------------- walk-forward
     print("4) Walk-forward testing (this is the slow part)...")
-    oos, resid = ev.walk_forward(panel, cfg)
+    oos, resid, resid_1d = ev.walk_forward(panel, cfg)
 
     dir_tab = ev.direction_table(oos)
     auc = dir_tab.set_index("col")["auc"]
@@ -88,8 +90,11 @@ def main():
     boot = ev.bootstrap(oos, primary)
     cal = ev.calibration_table(oos, primary)
     rng_tab = ev.range_table(oos)
-    print("\n   Range results:")
+    rng1_tab = ev.range_table_1d(oos)
+    print("\n   Range results (1 week):")
     print(rng_tab.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+    print("\n   Range results (tomorrow):")
+    print(rng1_tab.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
 
     # ------------------------------------------------------------- backtest
     print("5) Backtest...")
@@ -106,10 +111,26 @@ def main():
     for d in v["details"]:
         print("    - " + d)
 
+    # ---------------------------------------------------------- experiments
+    print("6) Experiments: easier questions (beat peers / 1 month)...")
+    exps = ev.run_experiments(panel, cfg, oos)
+    for name, e in exps.items():
+        d, x = e["dev"], e["exam"]
+        print(f"   {e['desc']:<45} dev AUC {d['auc']:.3f} IC {d['ic']:+.3f} (t={d['ic_t']:.1f}) | "
+              + (f"exam AUC {x['auc']:.3f} IC {x['ic']:+.3f}" if x else "exam n/a") + f" -> {e['label']}")
+
     # ---------------------------------------------------------- final model
-    print("6) Training the final model on all data...")
+    print("7) Training the final models on all data...")
     labeled = panel[panel["fwd_ret"].notna()]
     final = fit_models(labeled)
+    # Final models for the "beat peers" questions (shown in LATEST.md with their verdicts)
+    exp_models = {}
+    for name in ("rel_5", "rel_20"):
+        if name in exps:
+            ycol = exps[name]["ycol"]
+            m = fit_classifiers(panel[panel[ycol].notna()], ycol)
+            exp_models[name] = {"model": m[exps[name]["best"].replace("p_", "")],
+                                "level": exps[name]["level"], "label": exps[name]["label"]}
     gain = final["lgbm"].booster_.feature_importance("gain")
     imp = pd.Series(gain / gain.sum(), index=FEATURES).sort_values(ascending=False)
     coef = pd.Series(final["logit"].named_steps["lr"].coef_[0], index=FEATURES)
@@ -121,6 +142,8 @@ def main():
         "primary_name": primary_name,
         "features": FEATURES,
         "cqr_adj": float(np.quantile(resid, 0.8)),   # range widening learned out-of-sample
+        "cqr_adj_1d": float(np.quantile(resid_1d, 0.8)),
+        "experiments": exp_models,
         "verdict": v,
         "trained_through": str(labeled["date"].max().date()),
         "trained_on": date.today().isoformat(),
@@ -129,6 +152,9 @@ def main():
         "metrics": {
             "direction": dir_tab.drop(columns="col").to_dict("records"),
             "range": rng_tab.to_dict("records"),
+            "range_1d": rng1_tab.to_dict("records"),
+            "experiments": {k: {x: e[x] for x in ["desc", "best", "dev", "exam", "level", "label"]}
+                            for k, e in exps.items()},
         },
     }
     (ROOT / "models").mkdir(exist_ok=True)
@@ -139,14 +165,15 @@ def main():
                   | {"verdict": {k: v[k] for k in ["level", "headline", "details"]}}, f, indent=2, default=float)
 
     # --------------------------------------------------------------- report
-    print("7) Writing report...")
+    print("8) Writing report...")
     (ROOT / "docs").mkdir(exist_ok=True)
     ctx = dict(verdict=v, direction=dir_tab, calibration=cal, range=rng_tab, backtest=bt,
                backtest_summary=bt_sum, sweep=sweep, yearly=ev.yearly_table(oos, primary),
                importance=imp, coefs=top_coefs, primary_name=primary_name,
                coverage_by_group=ev.coverage_by_group(oos, cfg["groups"]),
                data_end=str(panel["date"].max().date()), test_start=str(oos["date"].min().date()),
-               n_rows=len(panel), n_tickers=panel["ticker"].nunique(), gap_days=cfg["model"]["gap_days"],
+               n_rows=len(panel), n_tickers=len(targets), n_pool=len(pool), range_1d=rng1_tab,
+               experiments=exps, exam_start=cfg["experiments"]["final_exam_start"], gap_days=cfg["model"]["gap_days"],
                threshold=bt_cfg["threshold"], cost=bt_cfg["cost_per_trade"], leak_msg=leak_msg,
                short_history=short, synthetic=args.synthetic)
     build_report(ctx, ROOT / "docs" / "report.html", ROOT / "REPORT.md", ROOT / "docs" / "backtest.png")

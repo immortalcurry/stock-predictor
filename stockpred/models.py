@@ -84,6 +84,14 @@ def fit_models(train):
         a: LGBMRegressor(objective="quantile", alpha=a, **LGBM_PARAMS).fit(X, z)
         for a in QUANTILES
     }
+    # Tomorrow's range: same idea, trained on the 1-day forward move
+    d1 = train[train["z_target_1"].notna()]
+    z1 = d1["z_target_1"].clip(-8, 8)
+    m["quantile_1d"] = {
+        a: LGBMRegressor(objective="quantile", alpha=a, **LGBM_PARAMS).fit(d1[FEATURES], z1)
+        for a in QUANTILES
+    }
+    m["z1_quantiles"] = {a: float(np.nanquantile(z1, a)) for a in QUANTILES}
     # --- baseline statistics ---
     base_rate = float(y.mean())
     by_t = train.groupby("ticker")["y_up"].agg(["sum", "count"])
@@ -108,4 +116,22 @@ def predict_all(m, df):
     out["q10_z"], out["q50_z"], out["q90_z"] = q[:, 0], q[:, 1], q[:, 2]
     for a, name in zip(QUANTILES, ["bq10_z", "bq50_z", "bq90_z"]):
         out[name] = m["z_quantiles"][a]
+    q1 = np.column_stack([m["quantile_1d"][a].predict(X) for a in QUANTILES])
+    q1.sort(axis=1)
+    out["q10_1d_z"], out["q50_1d_z"], out["q90_1d_z"] = q1[:, 0], q1[:, 1], q1[:, 2]
+    out["bq10_1d_z"], out["bq90_1d_z"] = m["z1_quantiles"][0.1], m["z1_quantiles"][0.9]
     return out
+
+
+# ----------------------------------------------------------------------------
+# Experiments: the same two classifiers, pointed at a different yes/no question
+# ----------------------------------------------------------------------------
+def fit_classifiers(train, ycol):
+    X, y = train[FEATURES], train[ycol].astype(int)
+    return {"logit": make_logit().fit(X, y), "lgbm": LGBMClassifier(**LGBM_PARAMS).fit(X, y)}
+
+
+def predict_classifiers(m, df):
+    X = df[FEATURES]
+    return pd.DataFrame({"p_logit": m["logit"].predict_proba(X)[:, 1],
+                         "p_lgbm": m["lgbm"].predict_proba(X)[:, 1]}, index=df.index)

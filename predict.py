@@ -1,7 +1,9 @@
 """
 predict.py: run after the market closes. For each ticker it prints:
-  * P(up over the next 5 trading days)
-  * a predicted range: 10th / 50th / 90th percentile of the 5-day return
+  * price estimates: likely low / middle / high for TOMORROW's close and for the
+    close 5 trading days from now
+  * P(up over the next 5 trading days) and P(beats its peers)
+  * the predicted range: 10th / 50th / 90th percentile of the 5-day return
   * a plain-English confidence note
   * whether earnings fall inside the week
 Holdings (NBIS, CRWV) are listed first.
@@ -25,7 +27,10 @@ from stockpred.models import predict_all
 LOG_PATH = ROOT / "paper_log.csv"
 LOG_COLUMNS = ["logged_at_utc", "asof_date", "ticker", "is_holding", "p_up", "q10", "q50", "q90",
                "earnings_in_week", "model_trained_on", "target_date", "actual_ret", "actual_up",
-               "direction_correct", "in_range"]
+               "direction_correct", "in_range",
+               # added in v2
+               "last_close", "q10_1d", "q90_1d", "p_beat_peers_5d", "p_beat_peers_20d",
+               "actual_ret_1d", "in_range_1d", "beat_peers_correct"]
 
 
 def confidence_note(p, verdict_level, earnings_week, short, stale):
@@ -66,7 +71,11 @@ def main():
         prices, earnings, fred = load_all(cfg, max_age_hours=1)   # we want today's close
 
     targets = [t for t in cfg["targets"] if t in prices]
-    panel = build_panel(prices, earnings, fred, targets, cfg["model"]["horizon"])
+    pool = [t for t in cfg["pool"] if t in prices]
+    # Features are built on the whole pool (peer ranks need everyone); we only
+    # report on the target stocks.
+    panel = build_panel(prices, earnings, fred, pool, cfg["model"]["horizon"], targets=targets)
+    panel = panel[panel["is_target"]]
     last_market_day = prices["SPY"].index.max()
     latest = panel.loc[panel.groupby("ticker")["date"].idxmax()].copy()
 
@@ -76,6 +85,16 @@ def main():
     latest["q10"] = ((p["q10_z"] - adj) * latest["scale"]).values
     latest["q50"] = (p["q50_z"] * latest["scale"]).values
     latest["q90"] = ((p["q90_z"] + adj) * latest["scale"]).values
+    # Tomorrow's range
+    adj1 = b.get("cqr_adj_1d", 0.0)
+    latest["q10_1d"] = ((p["q10_1d_z"] - adj1) * latest["scale_1"]).values
+    latest["q50_1d"] = (p["q50_1d_z"] * latest["scale_1"]).values
+    latest["q90_1d"] = ((p["q90_1d_z"] + adj1) * latest["scale_1"]).values
+    # "Beats its peers" probabilities from the experiment models
+    exps = b.get("experiments", {})
+    for name, col in [("rel_5", "p_rel_5"), ("rel_20", "p_rel_20")]:
+        latest[col] = (exps[name]["model"].predict_proba(latest[b["features"]])[:, 1]
+                       if name in exps else np.nan)
 
     hist = panel.groupby("ticker")["n_days_history"].max()
     short_days = cfg["data"]["short_history_days"]
@@ -90,6 +109,8 @@ def main():
         rows.append({
             "ticker": t, "holding": t in holdings, "group": cfg["groups"].get(t, ""),
             "date": r["date"].date(), "p_up": r["p_up"], "q10": r["q10"], "q50": r["q50"], "q90": r["q90"],
+            "close": r["close"], "q10_1d": r["q10_1d"], "q50_1d": r["q50_1d"], "q90_1d": r["q90_1d"],
+            "p_rel_5": r["p_rel_5"], "p_rel_20": r["p_rel_20"],
             "earnings": "unknown" if np.isnan(ew) else ("YES" if ew == 1 else "no"),
             "earnings_flag": ew,
             "short": hist.get(t, 0) < short_days,
@@ -104,11 +125,15 @@ def main():
     print(f"\nPredictions for the 5 trading days after {asof}   (model: {b['primary_name']}, "
           f"trained {b['trained_on']})")
     print(f"Model verdict from testing: {b['verdict']['headline']}\n")
-    print(f"{'':2}{'Ticker':<7}{'P(up)':>7}   {'Range 10%..90%':<18}{'Middle':>8}  {'Earnings':<9} Note")
+    print(f"{'':2}{'Ticker':<7}{'Close':>9}  {'Tomorrow (low..high)':<22}{'In 1 week (low / mid / high)':<32}"
+          f"{'P(up)':>6} {'P(beat)':>8}  {'Earn':<8} Note")
     for _, r in out.iterrows():
         star = "* " if r["holding"] else "  "
-        print(f"{star}{r['ticker']:<7}{r['p_up']:>6.0%}   {r['q10']:>+6.1%} .. {r['q90']:<+7.1%}  "
-              f"{r['q50']:>+6.1%}  {r['earnings']:<9} {r['note']}")
+        c = r["close"]
+        print(f"{star}{r['ticker']:<7}{money(c):>9}  "
+              f"{money(c * (1 + r['q10_1d'])) + ' .. ' + money(c * (1 + r['q90_1d'])):<22}"
+              f"{money(c * (1 + r['q10'])) + ' / ' + money(c * (1 + r['q50'])) + ' / ' + money(c * (1 + r['q90'])):<32}"
+              f"{r['p_up']:>6.0%} {pct(r['p_rel_5']):>8}  {r['earnings']:<8} {r['note']}")
     print(f"\nAverage P(up) across all stocks: {out['p_up'].mean():.0%}. Predictions move together, "
           "so they are partly a single market call.")
 
@@ -119,6 +144,15 @@ def main():
     append_log(out, b, asof)
 
 
+def money(x):
+    """$1,234 for big prices, $12.34 for small ones."""
+    return f"${x:,.0f}" if x >= 1000 else f"${x:.2f}"
+
+
+def pct(x):
+    return "n/a" if pd.isna(x) else f"{x:.0%}"
+
+
 def write_latest_md(out, b, asof, synthetic):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines = [f"# Weekly move predictions, as of {asof} close", "",
@@ -126,16 +160,37 @@ def write_latest_md(out, b, asof, synthetic):
              f"trained {b['trained_on']}._", ""]
     if synthetic:
         lines += ["> **SYNTHETIC TEST DATA.** These are not real predictions.", ""]
-    lines += [f"> **Honesty check:** {b['verdict']['headline']}", "",
-              "| | Ticker | P(up) | Range (10%–90%) | Middle | Earnings in week | Note |",
+    exps = b.get("experiments", {})
+    lines += [f"> **Honesty check on direction (P(up)):** {b['verdict']['headline']}", "",
+              "## Price estimates", "",
+              "Likely low and high are the 10th and 90th percentiles: the close should land "
+              "between them about 4 times out of 5.", "",
+              "| | Ticker | Last close | Tomorrow: low – high | In 1 week: low | Middle | High |",
               "|---|---|---|---|---|---|---|"]
     for _, r in out.iterrows():
+        c = r["close"]
+        lines.append(f"| {'★' if r['holding'] else ''} | **{r['ticker']}** | {money(c)} | "
+                     f"{money(c * (1 + r['q10_1d']))} – {money(c * (1 + r['q90_1d']))} | "
+                     f"{money(c * (1 + r['q10']))} | {money(c * (1 + r['q50']))} | {money(c * (1 + r['q90']))} |")
+    lines += ["", "## Direction and ranking", "",
+              "| | Ticker | P(up) 1 wk | Range 1 wk | P(beats peers) 1 wk | P(beats peers) 1 mo | Earnings in week | Note |",
+              "|---|---|---|---|---|---|---|---|"]
+    for _, r in out.iterrows():
         lines.append(f"| {'★' if r['holding'] else ''} | **{r['ticker']}** | {r['p_up']:.0%} | "
-                     f"{r['q10']:+.1%} to {r['q90']:+.1%} | {r['q50']:+.1%} | {r['earnings']} | {r['note']} |")
-    lines += ["", f"Average P(up) across all stocks: **{out['p_up'].mean():.0%}**.", "",
-              "**How to read this:** P(up) is the chance the stock is higher 5 trading days from now. "
-              "The range should contain the actual move about 80% of the time. "
-              "Anything between 47% and 53% is a coin flip. Not investment advice.", "",
+                     f"{r['q10']:+.1%} to {r['q90']:+.1%} | {pct(r['p_rel_5'])} | {pct(r['p_rel_20'])} | "
+                     f"{r['earnings']} | {r['note']} |")
+    lines += ["", f"Average P(up) across all stocks: **{out['p_up'].mean():.0%}**.", ""]
+    if exps:
+        lines += ["**How much to trust \"beats peers\"** (chance the stock does better than the average "
+                  "of ~100 chip/tech stocks):", ""]
+        for name, label in [("rel_5", "1 week"), ("rel_20", "1 month")]:
+            if name in exps:
+                lines.append(f"- {label}: {exps[name]['label']}")
+        lines.append("")
+    lines += ["**How to read this:** the price ranges are the most reliable part. P(up) is the chance the "
+              "stock is higher 5 trading days from now; anything between 47% and 53% is a coin flip. "
+              "The middle price is usually close to the last close because nobody can reliably call "
+              "direction. Not investment advice.", "",
               "<!-- SCORE START -->", "_Paper-trading score appears here once predictions are a week old._",
               "<!-- SCORE END -->", ""]
     (ROOT / "LATEST.md").write_text("\n".join(lines))
@@ -149,6 +204,9 @@ def append_log(out, b, asof):
         "p_up": out["p_up"].round(4), "q10": out["q10"].round(4), "q50": out["q50"].round(4),
         "q90": out["q90"].round(4), "earnings_in_week": out["earnings_flag"],
         "model_trained_on": b["trained_on"],
+        "last_close": out["close"].round(4), "q10_1d": out["q10_1d"].round(4),
+        "q90_1d": out["q90_1d"].round(4), "p_beat_peers_5d": out["p_rel_5"].round(4),
+        "p_beat_peers_20d": out["p_rel_20"].round(4),
     })
     if LOG_PATH.exists():
         log = pd.read_csv(LOG_PATH, dtype={"asof_date": str})

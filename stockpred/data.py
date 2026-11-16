@@ -109,10 +109,11 @@ def apply_start_overrides(prices, overrides):
 # ----------------------------------------------------------------------------
 # Earnings dates
 # ----------------------------------------------------------------------------
-def download_earnings(tickers, cache_dir, max_age_hours, force=False):
+def download_earnings(tickers, cache_dir, max_age_hours, force=False, use_calendar=()):
     """
-    Return {ticker: DataFrame[date, after_close]}, covering past and scheduled
-    future earnings dates.
+    Return {ticker: DataFrame[date, after_close, surprise]}, covering past and
+    scheduled future earnings dates. `surprise` is how far reported earnings per
+    share beat (+) or missed (-) analyst estimates, in % (NaN if unknown/future).
 
     after_close=True means the report comes after the bell, so the price reacts
     the NEXT trading day. Yahoo's earnings scraping is sometimes flaky. If it
@@ -126,6 +127,8 @@ def download_earnings(tickers, cache_dir, max_age_hours, force=False):
         p = cache / f"{_safe(t)}.csv"
         if not force and _is_fresh(p, max_age_hours):
             df = pd.read_csv(p, parse_dates=["date"])
+            if "surprise" not in df:
+                df["surprise"] = float("nan")     # cache written by an older version
             out[t] = df
             continue
 
@@ -138,25 +141,30 @@ def download_earnings(tickers, cache_dir, max_age_hours, force=False):
                 idx = pd.DatetimeIndex(ed.index)
                 if idx.tz is not None:
                     idx = idx.tz_convert("America/New_York")
-                for ts in idx:
-                    rows.append({"date": pd.Timestamp(ts.date()), "after_close": ts.hour >= 12})
+                surp = (pd.to_numeric(ed["Surprise(%)"], errors="coerce").values
+                        if "Surprise(%)" in ed else [float("nan")] * len(idx))
+                for ts, sp in zip(idx, surp):
+                    rows.append({"date": pd.Timestamp(ts.date()), "after_close": ts.hour >= 12,
+                                 "surprise": sp})
         except Exception as e:
             print(f"  earnings dates for {t} unavailable ({e})")
         # Backup source for the NEXT date: Ticker.calendar
         try:
-            cal = yf.Ticker(t).calendar
+            cal = yf.Ticker(t).calendar if t in use_calendar else None
             nxt = cal.get("Earnings Date") if isinstance(cal, dict) else None
             for d in (nxt or []):
                 d = pd.Timestamp(d)
                 if all(r["date"] != d for r in rows):
                     # Time unknown: assume after the close, which is typical for US tech.
-                    rows.append({"date": d, "after_close": True})
+                    rows.append({"date": d, "after_close": True, "surprise": float("nan")})
         except Exception:
             pass
 
-        df = pd.DataFrame(rows, columns=["date", "after_close"])
+        df = pd.DataFrame(rows, columns=["date", "after_close", "surprise"])
         if len(df) == 0 and p.exists():
             df = pd.read_csv(p, parse_dates=["date"])   # keep the old cache
+            if "surprise" not in df:
+                df["surprise"] = float("nan")
         else:
             df = df.drop_duplicates("date").sort_values("date")
             df.to_csv(p, index=False)
@@ -196,13 +204,14 @@ def download_fred(series, cache_dir, max_age_hours, force=False):
 def load_all(cfg, max_age_hours=None, force=False):
     d = cfg["data"]
     age = d["cache_max_age_hours"] if max_age_hours is None else max_age_hours
-    tickers = cfg["targets"] + cfg["context"]["tickers"]
+    tickers = cfg["pool"] + cfg["context"]["tickers"]
     prices = download_prices(tickers, d["years"], d["cache_dir"], age, force)
     prices = apply_start_overrides(prices, d["start_overrides"])
     if "SPY" not in prices:
         raise RuntimeError("SPY data is required (it defines the trading calendar). "
                            "Is Yahoo Finance reachable?")
-    targets = [t for t in cfg["targets"] if t in prices]
-    earnings = download_earnings(targets, d["cache_dir"], max(age, 24), force)
+    pool = [t for t in cfg["pool"] if t in prices]
+    earnings = download_earnings(pool, d["cache_dir"], max(age, 24), force,
+                                 use_calendar=set(cfg["targets"]))
     fred = download_fred(cfg["context"]["fred_series"], d["cache_dir"], age, force)
     return prices, earnings, fred

@@ -21,6 +21,8 @@ def load_config(path=None):
         groups.setdefault(t, "holding")
 
     cfg["targets"] = list(groups)          # every ticker we predict
+    # Pool = targets + extra training-only tickers (more examples for the model)
+    cfg["pool"] = list(groups) + [t for t in uni.get("extra_training", []) if t not in groups]
     cfg["groups"] = groups
     cfg["holdings"] = list(uni["holdings"])
     cfg["data"].setdefault("start_overrides", {})
