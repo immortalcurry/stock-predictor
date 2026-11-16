@@ -1,0 +1,75 @@
+{
+  "primary_name": "Logistic regression",
+  "trained_through": "2026-11-06",
+  "trained_on": "2026-11-16",
+  "cqr_adj": 0.13510461896329656,
+  "short_history": [
+    "CRWV",
+    "SNDK"
+  ],
+  "synthetic": false,
+  "metrics": {
+    "direction": [
+      {
+        "model": "Baseline: always up",
+        "accuracy": 0.5604263390329521,
+        "auc": 0.5,
+        "brier": 0.24662518506231104
+      },
+      {
+        "model": "Baseline: last week repeats",
+        "accuracy": 0.5006086513418639,
+        "auc": 0.49332305955489636,
+        "brier": 0.4993913486581361
+      },
+      {
+        "model": "Baseline: historical average",
+        "accuracy": 0.5600300079266222,
+        "auc": 0.5054351187883486,
+        "brier": 0.24670522146866303
+      },
+      {
+        "model": "Logistic regression",
+        "accuracy": 0.5417280036235987,
+        "auc": 0.5027161934590756,
+        "brier": 0.24977883380942337
+      },
+      {
+        "model": "LightGBM",
+        "accuracy": 0.5440493715321029,
+        "auc": 0.4940857112603594,
+        "brier": 0.25056754313957585
+      }
+    ],
+    "range": [
+      {
+        "model": "Baseline (volatility only)",
+        "coverage": 0.797531423394859,
+        "median_width": 0.1329721615694453,
+        "pinball": 0.015627702721892164
+      },
+      {
+        "model": "LightGBM (raw)",
+        "coverage": 0.7552372324765032,
+        "median_width": 0.11495484674734446,
+        "pinball": 0.015476766147619747
+      },
+      {
+        "model": "LightGBM (calibrated)",
+        "coverage": 0.7874532895481825,
+        "median_width": 0.1251229894001072,
+        "pinball": NaN
+      }
+    ]
+  },
+  "verdict": {
+    "level": "no_edge",
+    "headline": "No reliable edge. The model is not distinguishable from a coin flip / simple baselines once you account for noise.",
+    "details": [
+      "Out-of-sample accuracy 54.2% vs 56.0% for simply guessing 'up' every time (difference -1.9%, 90% range -2.6% to -1.0%).",
+      "ROC AUC 0.503 (0.5 = no skill; 90% range 0.488-0.518); best simple baseline AUC 0.505.",
+      "The 10-90% range caught the actual move 79% of the time after calibration (target 80%).",
+      "Backtest after costs: 37.3%/yr (Sharpe 1.17) vs 42.7%/yr (Sharpe 1.31) for just holding all the stocks. The rule did NOT beat simply holding the stocks on risk-adjusted terms."
+    ]
+  }
+}
