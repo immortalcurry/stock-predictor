@@ -1,8 +1,8 @@
 {
   "primary_name": "Logistic regression",
-  "trained_through": "2026-11-06",
-  "trained_on": "2026-11-16",
-  "cqr_adj": 0.11385624235262326,
+  "trained_through": "2026-11-13",
+  "trained_on": "2026-11-22",
+  "cqr_adj": 0.11714991025145274,
   "short_history": [
     "CRWV",
     "SNDK"
@@ -12,70 +12,70 @@
     "direction": [
       {
         "model": "Baseline: always up",
-        "accuracy": 0.5604829917139119,
+        "accuracy": 0.5594723242214062,
         "auc": 0.5,
-        "brier": 0.2467445901704423
+        "brier": 0.24685840640634452
       },
       {
         "model": "Baseline: last week repeats",
-        "accuracy": 0.5003679677278674,
-        "auc": 0.49306383973321544,
-        "brier": 0.4996320322721326
+        "accuracy": 0.5001359989120087,
+        "auc": 0.49294118810337384,
+        "brier": 0.4998640010879913
       },
       {
         "model": "Baseline: historical average",
-        "accuracy": 0.5597197993894462,
-        "auc": 0.5051967479785133,
-        "brier": 0.2467068328972124
+        "accuracy": 0.5587787297701619,
+        "auc": 0.505176313394305,
+        "brier": 0.24683254930190962
       },
       {
         "model": "Logistic regression",
-        "accuracy": 0.5400812254688181,
-        "auc": 0.5086319335511551,
-        "brier": 0.2495037238486709
+        "accuracy": 0.5398884808921529,
+        "auc": 0.5081359778670738,
+        "brier": 0.24949480182544187
       },
       {
         "model": "LightGBM",
-        "accuracy": 0.5434065634539904,
-        "auc": 0.49909504163231394,
-        "brier": 0.2505343338589711
+        "accuracy": 0.5437780497756018,
+        "auc": 0.497153396120553,
+        "brier": 0.2508725784671509
       }
     ],
     "range": [
       {
         "model": "Baseline (volatility only)",
-        "coverage": 0.7963366768425644,
-        "median_width": 0.1303780444351067,
-        "pinball": 0.015397090057149397
+        "coverage": 0.7963960288317693,
+        "median_width": 0.13061330141273958,
+        "pinball": 0.01543208123496199
       },
       {
         "model": "LightGBM (raw)",
-        "coverage": 0.761965765372874,
-        "median_width": 0.11462311254375473,
-        "pinball": 0.015209568119503405
+        "coverage": 0.7606827145382837,
+        "median_width": 0.11467159678655385,
+        "pinball": 0.015247808360155476
       },
       {
         "model": "LightGBM (calibrated)",
-        "coverage": 0.7905718491059747,
-        "median_width": 0.12360781846059353,
+        "coverage": 0.7909968720250238,
+        "median_width": 0.1240580275061415,
         "pinball": NaN
       }
     ],
     "range_1d": [
       {
         "model": "Baseline (volatility only)",
-        "coverage": 0.7970998691670301,
-        "median_width": 0.05549746274542648
+        "coverage": 0.7969944240446076,
+        "median_width": 0.05552751704705362
       },
       {
         "model": "LightGBM (raw)",
-        "coverage": 0.7817678805058875,
-        "median_width": 0.05094557135892361
+        "coverage": 0.7810961512307901,
+        "median_width": 0.05099834737872269
       },
       {
         "model": "LightGBM (calibrated)",
-        "coverage": 0.7919619494112516,
-        "median_width": 0.05247160057150152
+        "coverage": 0.7920168638650891,
+        "median_width": 0.0525666210713781
       }
     ],
     "experiments": {
@@ -84,27 +84,27 @@
         "best": "p_logit",
         "dev": {
           "n": 59118,
-          "accuracy": 0.5418485063770764,
+          "accuracy": 0.5426266111844108,
           "naive": 0.5628065902094117,
-          "auc": 0.5079992593785705,
-          "auc_lo": 0.48879760908372455,
-          "auc_hi": 0.5224999280569065,
-          "ic": 0.01757964539860875,
-          "ic_t": 2.08821370568605,
-          "top_excess": -0.032008654710829365,
-          "top_sharpe": -0.21199109509950925
+          "auc": 0.5073180194388287,
+          "auc_lo": 0.4885459039221902,
+          "auc_hi": 0.5204116177709507,
+          "ic": 0.017014894009811186,
+          "ic_t": 1.9409846609186263,
+          "top_excess": -0.04197230849606195,
+          "top_sharpe": -0.2855029777818704
         },
         "exam": {
-          "n": 14258,
-          "accuracy": 0.5327535418712301,
-          "naive": 0.5508486463739655,
-          "auc": 0.5097009134696977,
-          "auc_lo": 0.4783165281850919,
-          "auc_hi": 0.5345872647126516,
-          "ic": -0.0013891923565866862,
-          "ic_t": -0.05132489311266682,
-          "top_excess": -0.13319848925230435,
-          "top_sharpe": -0.5032308157669888
+          "n": 14412,
+          "accuracy": 0.5286566749930613,
+          "naive": 0.5457951706910907,
+          "auc": 0.5088668399169126,
+          "auc_lo": 0.4755464562709477,
+          "auc_hi": 0.5320149467892655,
+          "ic": -0.0030034598635164046,
+          "ic_t": -0.1442743195094339,
+          "top_excess": -0.18477162244186185,
+          "top_sharpe": -0.7036664222616441
         },
         "level": "no_edge",
         "label": "No edge"
@@ -114,27 +114,27 @@
         "best": "p_logit",
         "dev": {
           "n": 59118,
-          "accuracy": 0.5136844954159477,
+          "accuracy": 0.5120267938698874,
           "naive": 0.509929293954464,
-          "auc": 0.5196651733252445,
-          "auc_lo": 0.5132523435116684,
-          "auc_hi": 0.5270667148315816,
-          "ic": 0.04846471735175604,
-          "ic_t": 5.72664699234101,
-          "top_excess": 0.14970113597574372,
-          "top_sharpe": 0.7594276986926554
+          "auc": 0.519212238164711,
+          "auc_lo": 0.5117640069755738,
+          "auc_hi": 0.5263128336095173,
+          "ic": 0.046968628095618366,
+          "ic_t": 5.50699410520137,
+          "top_excess": 0.16121352832884325,
+          "top_sharpe": 0.8366675621966951
         },
         "exam": {
-          "n": 14258,
-          "accuracy": 0.5026651704306354,
-          "naive": 0.5105204095946135,
-          "auc": 0.512001393854399,
-          "auc_lo": 0.496279926321728,
-          "auc_hi": 0.5302336626567035,
-          "ic": 0.030677550521378442,
-          "ic_t": 1.6173773124420712,
-          "top_excess": 0.03179492839578704,
-          "top_sharpe": 0.10719774299696423
+          "n": 14412,
+          "accuracy": 0.5009714127116291,
+          "naive": 0.5092978073827366,
+          "auc": 0.5081135105477949,
+          "auc_lo": 0.49105479223220855,
+          "auc_hi": 0.5222604174765286,
+          "ic": 0.019672453096258515,
+          "ic_t": 0.9806316897484894,
+          "top_excess": 0.06975738136591843,
+          "top_sharpe": 0.2421248833174333
         },
         "level": "confirmed",
         "label": "Small edge: passed development AND the final exam"
@@ -144,27 +144,27 @@
         "best": "p_logit",
         "dev": {
           "n": 59118,
-          "accuracy": 0.5667309448898813,
+          "accuracy": 0.5669677593964613,
           "naive": 0.6105077979633953,
-          "auc": 0.5048061270579267,
-          "auc_lo": 0.4697614419031952,
-          "auc_hi": 0.5388188453309485,
-          "ic": 0.012711341948360537,
-          "ic_t": 0.86716937580465,
-          "top_excess": -0.06228131200620603,
-          "top_sharpe": -0.4215693081819245
+          "auc": 0.5044492815820412,
+          "auc_lo": 0.4666926873055985,
+          "auc_hi": 0.5351774247580428,
+          "ic": 0.010004658571559414,
+          "ic_t": 0.712258648348692,
+          "top_excess": -0.042540556944166294,
+          "top_sharpe": -0.29646707402776645
         },
         "exam": {
-          "n": 13793,
-          "accuracy": 0.5790618429638222,
-          "naive": 0.5802943522076416,
-          "auc": 0.5238744205371835,
-          "auc_lo": 0.45281935598539513,
-          "auc_hi": 0.5952077723077406,
-          "ic": -0.016166715093696587,
-          "ic_t": -0.18426464174012935,
-          "top_excess": 0.05133460105934023,
-          "top_sharpe": 0.18592686416230841
+          "n": 13947,
+          "accuracy": 0.5710188571018857,
+          "naive": 0.5751057575105758,
+          "auc": 0.5171268695071993,
+          "auc_lo": 0.46510387871991515,
+          "auc_hi": 0.5876661728444571,
+          "ic": -0.021689783102825266,
+          "ic_t": -0.26004655161976364,
+          "top_excess": 0.04465196731745498,
+          "top_sharpe": 0.18358224348915186
         },
         "level": "no_edge",
         "label": "No edge"
@@ -174,27 +174,27 @@
         "best": "p_logit",
         "dev": {
           "n": 59118,
-          "accuracy": 0.5179133258905917,
+          "accuracy": 0.516543184816807,
           "naive": 0.5160018945160526,
-          "auc": 0.5244597201548717,
-          "auc_lo": 0.512229484154632,
-          "auc_hi": 0.5373956520945511,
-          "ic": 0.06273299857962025,
-          "ic_t": 3.8990474060493145,
-          "top_excess": 0.0013012634505923204,
-          "top_sharpe": 0.00741339198927416
+          "auc": 0.5231311060011355,
+          "auc_lo": 0.5123404295716854,
+          "auc_hi": 0.5343608688642646,
+          "ic": 0.061778916263128224,
+          "ic_t": 3.8644508232978674,
+          "top_excess": 0.01340892356530648,
+          "top_sharpe": 0.07544112562377317
         },
         "exam": {
-          "n": 13793,
-          "accuracy": 0.48473863553976654,
-          "naive": 0.5271514536359023,
-          "auc": 0.4933976308026944,
-          "auc_lo": 0.4740725643473811,
-          "auc_hi": 0.512985924991316,
-          "ic": -0.005903464343490501,
-          "ic_t": -0.35354531968663144,
-          "top_excess": 0.4461672661102339,
-          "top_sharpe": 1.1008758898187316
+          "n": 13947,
+          "accuracy": 0.4817523481752348,
+          "naive": 0.5258478525847853,
+          "auc": 0.4876413981748604,
+          "auc_lo": 0.4704563997006894,
+          "auc_hi": 0.5091652380011709,
+          "ic": -0.01673684171840469,
+          "ic_t": -0.7810859172118183,
+          "top_excess": 0.6438890811185726,
+          "top_sharpe": 1.5992078764635824
         },
         "level": "failed_exam",
         "label": "Looked good in development, FAILED the final exam"
@@ -205,10 +205,10 @@
     "level": "no_edge",
     "headline": "No reliable edge. The model is not distinguishable from a coin flip / simple baselines once you account for noise.",
     "details": [
-      "Out-of-sample accuracy 54.0% vs 56.0% for simply guessing 'up' every time (difference -2.0%, 90% range -2.9% to -1.0%).",
-      "ROC AUC 0.509 (0.5 = no skill; 90% range 0.494-0.524); best simple baseline AUC 0.505.",
+      "Out-of-sample accuracy 54.0% vs 55.9% for simply guessing 'up' every time (difference -2.0%, 90% range -3.0% to -0.9%).",
+      "ROC AUC 0.508 (0.5 = no skill; 90% range 0.492-0.524); best simple baseline AUC 0.505.",
       "The 10-90% range caught the actual move 79% of the time after calibration (target 80%).",
-      "Backtest after costs: 47.0%/yr (Sharpe 1.37) vs 42.0%/yr (Sharpe 1.31) for just holding all the stocks. The rule beat that on risk-adjusted terms."
+      "Backtest after costs: 49.0%/yr (Sharpe 1.41) vs 40.4%/yr (Sharpe 1.27) for just holding all the stocks. The rule beat that on risk-adjusted terms."
     ]
   }
 }
