@@ -1,6 +1,6 @@
-# Weekly move predictions, as of 2026-11-20 close
+# Weekly move predictions, as of 2026-11-23 close
 
-_Generated 2026-11-21 02:42 UTC. Covers the next 5 trading days. Model: Logistic regression, trained 2026-11-16._
+_Generated 2026-11-24 05:28 UTC. Covers the next 5 trading days. Model: Logistic regression, trained 2026-11-22._
 
 > **Honesty check on direction (P(up)):** No reliable edge. The model is not distinguishable from a coin flip / simple baselines once you account for noise.
 
@@ -10,73 +10,73 @@ Likely low and high are the 10th and 90th percentiles: the close should land bet
 
 | | Ticker | Last close | Tomorrow: low – high | In 1 week: low | Middle | High |
 |---|---|---|---|---|---|---|
-| ★ | **NBIS** | $81.31 | $72.30 – $99.86 | $74.62 | $96.33 | $109.69 |
-| ★ | **CRWV** | $39.51 | $35.72 – $47.68 | $36.75 | $46.41 | $51.38 |
-|  | **MU** | $594.51 | $538.65 – $698.64 | $543.69 | $680.81 | $759.36 |
-|  | **IREN** | $11.82 | $10.52 – $14.50 | $10.87 | $13.97 | $15.97 |
-|  | **TSM** | $318.71 | $298.10 – $355.71 | $299.74 | $347.09 | $378.39 |
-|  | **ARM** | $152.20 | $139.48 – $177.21 | $141.31 | $172.95 | $190.07 |
-|  | **NVDA** | $125.53 | $118.38 – $139.39 | $119.63 | $135.87 | $148.73 |
-|  | **LRCX** | $183.27 | $167.63 – $212.24 | $169.07 | $206.20 | $229.46 |
-|  | **AMAT** | $302.63 | $279.86 – $345.55 | $283.21 | $338.07 | $369.44 |
-|  | **AMD** | $424.39 | $382.88 – $507.03 | $392.89 | $491.76 | $539.76 |
-|  | **ORCL** | $101.19 | $94.14 – $114.66 | $93.95 | $112.57 | $123.44 |
-|  | **DELL** | $278.02 | $252.30 – $327.29 | $239.51 | $321.55 | $381.90 |
-|  | **SMCI** | $21.65 | $20.11 – $24.42 | $20.23 | $24.08 | $26.29 |
-|  | **KLAC** | $126.87 | $117.68 – $144.14 | $118.52 | $141.03 | $153.41 |
-|  | **ASML** | $1,266 | $1,195 – $1,395 | $1,197 | $1,368 | $1,472 |
-|  | **AAPL** | $342.56 | $333.59 – $357.20 | $332.59 | $354.77 | $370.59 |
-|  | **STX** | $457.01 | $419.81 – $524.70 | $423.41 | $518.11 | $564.65 |
-|  | **ANET** | $167.62 | $154.89 – $191.41 | $156.39 | $187.03 | $200.86 |
-|  | **META** | $560.84 | $541.00 – $596.63 | $537.75 | $589.09 | $624.62 |
-|  | **ON** | $60.84 | $57.07 – $67.98 | $57.50 | $66.59 | $71.13 |
-|  | **AVGO** | $304.41 | $281.28 – $345.07 | $282.20 | $337.92 | $365.33 |
-|  | **MSFT** | $484.52 | $468.80 – $512.95 | $467.42 | $507.90 | $533.51 |
-|  | **GOOGL** | $265.29 | $254.63 – $285.72 | $256.74 | $282.98 | $295.88 |
-|  | **TXN** | $263.75 | $248.77 – $290.76 | $249.03 | $284.82 | $305.14 |
-|  | **AMZN** | $246.82 | $237.66 – $263.20 | $237.17 | $260.33 | $272.49 |
-|  | **WDC** | $261.11 | $238.11 – $305.89 | $239.71 | $296.67 | $330.65 |
-|  | **VRT** | $166.24 | $152.33 – $194.75 | $156.55 | $190.69 | $206.80 |
-|  | **MRVL** | $122.28 | $110.23 – $145.82 | $110.21 | $143.33 | $161.10 |
-|  | **INTC** | $51.28 | $46.75 – $60.61 | $48.15 | $59.33 | $64.87 |
-|  | **SNDK** | $94.39 | $84.73 – $105.24 | $82.99 | $100.42 | $118.82 |
+| ★ | **NBIS** | $97.80 | $84.77 – $113.35 | $79.40 | $104.80 | $129.91 |
+|  | **AAPL** | $349.08 | $339.88 – $359.61 | $334.03 | $354.93 | $372.01 |
+|  | **MSFT** | $492.50 | $476.49 – $511.13 | $465.12 | $503.40 | $532.33 |
+|  | **META** | $597.60 | $573.63 – $625.29 | $554.11 | $611.72 | $660.68 |
+|  | **AMZN** | $255.39 | $245.60 – $266.33 | $239.03 | $261.54 | $278.71 |
+|  | **AVGO** | $313.55 | $289.44 – $339.46 | $274.81 | $329.53 | $370.96 |
+|  | **GOOGL** | $282.10 | $269.86 – $296.29 | $262.98 | $290.35 | $312.18 |
+|  | **QCOM** | $165.38 | $154.12 – $177.99 | $148.28 | $171.66 | $191.69 |
+|  | **TSM** | $363.60 | $333.92 – $396.24 | $317.30 | $378.63 | $433.43 |
+|  | **TXN** | $291.19 | $271.81 – $312.33 | $260.04 | $301.73 | $338.21 |
+|  | **ON** | $66.77 | $61.95 – $72.07 | $59.49 | $69.40 | $77.88 |
+|  | **ASML** | $1,384 | $1,294 – $1,484 | $1,238 | $1,434 | $1,609 |
+|  | **MU** | $707.70 | $628.31 – $797.44 | $585.80 | $754.89 | $894.37 |
+|  | **ANET** | $178.31 | $164.10 – $193.54 | $156.18 | $186.45 | $209.78 |
+|  | **SMCI** | $24.53 | $22.35 – $26.86 | $21.38 | $25.68 | $29.76 |
+|  | **ORCL** | $113.68 | $104.36 – $124.05 | $98.18 | $119.64 | $136.99 |
+|  | **AMAT** | $346.87 | $315.57 – $381.18 | $301.30 | $363.57 | $414.75 |
+|  | **DELL** | $334.91 | $296.52 – $384.83 | $245.18 | $363.03 | $460.70 |
+|  | **AMD** | $453.46 | $406.09 – $505.71 | $386.59 | $480.60 | $556.73 |
+|  | **KLAC** | $145.85 | $133.27 – $159.38 | $127.14 | $152.68 | $174.06 |
+|  | **STX** | $520.10 | $476.97 – $572.89 | $445.70 | $547.25 | $628.45 |
+|  | **ARM** | $176.67 | $159.65 – $195.71 | $150.74 | $186.24 | $215.60 |
+|  | **SNDK** | $94.39 | $85.03 – $105.43 | $83.98 | $102.12 | $118.28 |
+|  | **LRCX** | $209.76 | $189.36 – $232.29 | $177.66 | $220.36 | $258.04 |
+|  | **WDC** | $297.25 | $268.19 – $330.63 | $249.04 | $313.00 | $368.09 |
+|  | **NVDA** | $165.05 | $146.94 – $185.87 | $139.57 | $174.44 | $205.05 |
+|  | **VRT** | $186.35 | $169.55 – $205.55 | $161.68 | $196.68 | $223.20 |
+|  | **INTC** | $59.66 | $54.04 – $66.37 | $51.82 | $63.25 | $73.15 |
+|  | **MRVL** | $144.74 | $128.29 – $163.91 | $118.79 | $157.30 | $188.57 |
+|  | **IREN** | $14.64 | $12.69 – $17.00 | $11.83 | $15.73 | $19.60 |
 
 ## Direction and ranking
 
 | | Ticker | P(up) 1 wk | Range 1 wk | P(beats peers) 1 wk | P(beats peers) 1 mo | Earnings in week | Note |
 |---|---|---|---|---|---|---|---|
-| ★ | **NBIS** | 61% | -8.2% to +34.9% | 56% | 52% | no | lean up (model has no proven edge) |
-| ★ | **CRWV** | 62% | -7.0% to +30.1% | 53% | 53% | no | lean up (model has no proven edge); limited history |
-|  | **MU** | 65% | -8.5% to +27.7% | 56% | 58% | no | lean up (model has no proven edge) |
-|  | **IREN** | 63% | -8.0% to +35.1% | 57% | 52% | no | lean up (model has no proven edge) |
-|  | **TSM** | 61% | -6.0% to +18.7% | 51% | 52% | no | lean up (model has no proven edge) |
-|  | **ARM** | 61% | -7.2% to +24.9% | 51% | 54% | no | lean up (model has no proven edge) |
-|  | **NVDA** | 60% | -4.7% to +18.5% | 52% | 52% | no | lean up (model has no proven edge) |
-|  | **LRCX** | 60% | -7.8% to +25.2% | 50% | 53% | no | lean up (model has no proven edge) |
-|  | **AMAT** | 60% | -6.4% to +22.1% | 50% | 51% | no | lean up (model has no proven edge) |
-|  | **AMD** | 59% | -7.4% to +27.2% | 50% | 48% | no | lean up (model has no proven edge) |
-|  | **ORCL** | 59% | -7.2% to +22.0% | 50% | 52% | no | lean up (model has no proven edge) |
-|  | **DELL** | 59% | -13.9% to +37.4% | 56% | 55% | YES | lean up (model has no proven edge); earnings this week: bigger move likely |
-|  | **SMCI** | 59% | -6.5% to +21.4% | 51% | 53% | no | lean up (model has no proven edge) |
-|  | **KLAC** | 58% | -6.6% to +20.9% | 49% | 50% | no | lean up (model has no proven edge) |
-|  | **ASML** | 58% | -5.5% to +16.3% | 48% | 48% | no | lean up (model has no proven edge) |
-|  | **AAPL** | 58% | -2.9% to +8.2% | 44% | 45% | no | lean up (model has no proven edge) |
-|  | **STX** | 58% | -7.4% to +23.6% | 50% | 53% | no | lean up (model has no proven edge) |
-|  | **ANET** | 58% | -6.7% to +19.8% | 47% | 45% | no | lean up (model has no proven edge) |
-|  | **META** | 58% | -4.1% to +11.4% | 46% | 47% | no | lean up (model has no proven edge) |
-|  | **ON** | 58% | -5.5% to +16.9% | 47% | 47% | no | lean up (model has no proven edge) |
-|  | **AVGO** | 58% | -7.3% to +20.0% | 48% | 48% | no | lean up (model has no proven edge) |
-|  | **MSFT** | 58% | -3.5% to +10.1% | 45% | 45% | no | lean up (model has no proven edge) |
-|  | **GOOGL** | 58% | -3.2% to +11.5% | 45% | 45% | no | lean up (model has no proven edge) |
-|  | **TXN** | 58% | -5.6% to +15.7% | 46% | 45% | no | lean up (model has no proven edge) |
-|  | **AMZN** | 57% | -3.9% to +10.4% | 44% | 44% | no | lean up (model has no proven edge) |
-|  | **WDC** | 57% | -8.2% to +26.6% | 49% | 52% | no | lean up (model has no proven edge) |
-|  | **VRT** | 55% | -5.8% to +24.4% | 48% | 49% | no | slight lean up (model has no proven edge) |
-|  | **MRVL** | 54% | -9.9% to +31.7% | 55% | 56% | no | slight lean up (model has no proven edge) |
-|  | **INTC** | 54% | -6.1% to +26.5% | 50% | 51% | no | slight lean up (model has no proven edge) |
-|  | **SNDK** | 53% | -12.1% to +25.9% | 52% | 49% | no | slight lean up (model has no proven edge); limited history; STALE data |
+| ★ | **NBIS** | 46% | -18.8% to +32.8% | 47% | 46% | no | slight lean down (model has no proven edge) |
+|  | **AAPL** | 60% | -4.3% to +6.6% | 48% | 46% | no | lean up (model has no proven edge) |
+|  | **MSFT** | 59% | -5.6% to +8.1% | 49% | 46% | no | lean up (model has no proven edge) |
+|  | **META** | 57% | -7.3% to +10.6% | 47% | 46% | no | lean up (model has no proven edge) |
+|  | **AMZN** | 57% | -6.4% to +9.1% | 47% | 44% | no | lean up (model has no proven edge) |
+|  | **AVGO** | 56% | -12.4% to +18.3% | 48% | 47% | no | slight lean up (model has no proven edge) |
+|  | **GOOGL** | 55% | -6.8% to +10.7% | 45% | 44% | no | slight lean up (model has no proven edge) |
+|  | **QCOM** | 55% | -10.3% to +15.9% | 46% | 44% | no | slight lean up (model has no proven edge) |
+|  | **TSM** | 54% | -12.7% to +19.2% | 47% | 47% | no | slight lean up (model has no proven edge) |
+|  | **TXN** | 54% | -10.7% to +16.1% | 46% | 44% | no | slight lean up (model has no proven edge) |
+|  | **ON** | 54% | -10.9% to +16.6% | 46% | 45% | no | slight lean up (model has no proven edge) |
+|  | **ASML** | 54% | -10.6% to +16.3% | 46% | 45% | no | slight lean up (model has no proven edge) |
+|  | **MU** | 54% | -17.2% to +26.4% | 50% | 51% | no | slight lean up (model has no proven edge) |
+|  | **ANET** | 54% | -12.4% to +17.6% | 46% | 42% | no | slight lean up (model has no proven edge) |
+|  | **SMCI** | 53% | -12.8% to +21.3% | 48% | 48% | no | slight lean up (model has no proven edge) |
+|  | **ORCL** | 53% | -13.6% to +20.5% | 48% | 48% | no | slight lean up (model has no proven edge) |
+|  | **AMAT** | 53% | -13.1% to +19.6% | 47% | 46% | no | coin flip (model has no proven edge) |
+|  | **DELL** | 53% | -26.8% to +37.6% | 53% | 50% | YES | coin flip (model has no proven edge); earnings this week: bigger move likely |
+|  | **AMD** | 53% | -14.7% to +22.8% | 47% | 44% | no | coin flip (model has no proven edge) |
+|  | **KLAC** | 53% | -12.8% to +19.3% | 47% | 46% | no | coin flip (model has no proven edge) |
+|  | **STX** | 52% | -14.3% to +20.8% | 48% | 49% | no | coin flip (model has no proven edge) |
+|  | **ARM** | 52% | -14.7% to +22.0% | 47% | 47% | no | coin flip (model has no proven edge) |
+|  | **SNDK** | 52% | -11.0% to +25.3% | 51% | 49% | no | coin flip (model has no proven edge); limited history; STALE data |
+|  | **LRCX** | 52% | -15.3% to +23.0% | 47% | 46% | no | coin flip (model has no proven edge) |
+|  | **WDC** | 51% | -16.2% to +23.8% | 47% | 46% | no | coin flip (model has no proven edge) |
+|  | **NVDA** | 50% | -15.4% to +24.2% | 48% | 48% | no | coin flip (model has no proven edge) |
+|  | **VRT** | 49% | -13.2% to +19.8% | 46% | 44% | no | coin flip (model has no proven edge) |
+|  | **INTC** | 48% | -13.1% to +22.6% | 45% | 45% | no | coin flip (model has no proven edge) |
+|  | **MRVL** | 47% | -17.9% to +30.3% | 49% | 49% | no | coin flip (model has no proven edge) |
+|  | **IREN** | 44% | -19.2% to +33.9% | 49% | 46% | no | slight lean down (model has no proven edge) |
 
-Average P(up) across all stocks: **59%**.
+Average P(up) across all stocks: **53%**.
 
 **How much to trust "beats peers"** (chance the stock does better than the typical stock among ~100 chip/tech names):
 
@@ -90,12 +90,12 @@ Average P(up) across all stocks: **59%**.
 
 | Measure | Model | Benchmark |
 |---|---|---|
-| Tomorrow's close inside the predicted range | 76% | 80% target (n=123) |
-| 1-week close inside the predicted range | 10% | 80% target (n=30) |
-| 1-week direction accuracy | 83.3% | 0.0% (always guess up) |
-| Brier score (lower = better) | 0.2174 | 0.2500 (always say 50%) |
-| CRWV: direction right / in range | 100% / 0% | n=1 |
-| NBIS: direction right / in range | 100% / 0% | n=1 |
+| Tomorrow's close inside the predicted range | 74% | 80% target (n=152) |
+| 1-week close inside the predicted range | 55% | 80% target (n=60) |
+| 1-week direction accuracy | 55.0% | 11.7% (always guess up) |
+| Brier score (lower = better) | 0.2452 | 0.2500 (always say 50%) |
+| CRWV: direction right / in range | 50% / 50% | n=2 |
+| NBIS: direction right / in range | 50% / 50% | n=2 |
 
-_About 1.0 weeks of scored data. Daily predictions overlap and stocks move together, so this is far fewer independent tests than the row count suggests. Too early to judge. Keep waiting._
+_About 1.2 weeks of scored data. Daily predictions overlap and stocks move together, so this is far fewer independent tests than the row count suggests. Too early to judge. Keep waiting._
 <!-- SCORE END -->
