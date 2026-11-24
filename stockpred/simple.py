@@ -149,7 +149,10 @@ def stock_card(ticker, close, row, hist, holding, short_history, cal_days_to_dat
     c = close.astype(float)
     price = float(c.iloc[-1])
     state, ma50, _ = trend_series(c)
-    vol = float(row["vol_20"])
+    # "Normal" is measured over the past year, so one crazy week doesn't
+    # redefine what normal looks like.
+    daily = c.pct_change().dropna().tail(250)
+    vol = float(daily.std()) if len(daily) >= 60 else float(row["vol_20"])
     typical_week = vol * np.sqrt(5)
     ret_5 = float(c.iloc[-1] / c.iloc[-6] - 1) if len(c) > 6 else np.nan
     card = {
@@ -245,12 +248,19 @@ def _card_lines(cd):
 
 def history_sentence(hist):
     u, d = hist["by_state"][1.0], hist["by_state"][-1.0]
-    return (f"Across ~100 chip and tech stocks since 2011: when a stock was in an **uptrend**, it was higher "
+    gap = u["p_up_quarter"] - d["p_up_quarter"]
+    base = (f"Across ~100 chip and tech stocks since 2011: when a stock was in an **uptrend**, it was higher "
             f"3 months later **{u['p_up_quarter']:.0%}** of the time (middle result {u['median_quarter']:+.0%}). "
             f"In a **downtrend**: **{d['p_up_quarter']:.0%}** (middle result {d['median_quarter']:+.0%}). "
-            f"For just the **next week** it's {u['p_up_week']:.0%} vs {d['p_up_week']:.0%}, "
-            f"barely better than a coin flip either way. That's why this page shows the trend and how long "
-            f"it tends to last, not a next-week call.")
+            f"For just the **next week**: {u['p_up_week']:.0%} vs {d['p_up_week']:.0%}. ")
+    if abs(gap) < 0.05:
+        return base + ("**So the trend label tells you where a stock has been, not where it's going:** "
+                       "in this group, up- and downtrends were followed by similar results. Use it to "
+                       "understand the situation, not as a buy or sell signal. These companies were mostly big "
+                       "winners, which makes dips look better in hindsight than they will always be.")
+    better = "uptrends" if gap > 0 else "downtrends"
+    return base + (f"So {better} were followed by somewhat better results, but the gap is modest and "
+                   "nothing here is a guarantee for any one stock.")
 
 
 def render_markdown(cards, market, hist, asof, synthetic):
