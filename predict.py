@@ -23,6 +23,7 @@ import pandas as pd
 from stockpred.config import ROOT, load_config
 from stockpred.features import build_panel
 from stockpred.models import predict_all
+from stockpred import simple
 
 LOG_PATH = ROOT / "paper_log.csv"
 LOG_COLUMNS = ["logged_at_utc", "asof_date", "ticker", "is_holding", "p_up", "q10", "q50", "q90",
@@ -122,6 +123,7 @@ def main():
             "p_rel_5": r["p_rel_5"], "p_rel_20": r["p_rel_20"],
             "earnings": "unknown" if np.isnan(ew) else ("YES" if ew == 1 else "no"),
             "earnings_flag": ew,
+            "vol_20": r["vol_20"], "days_to_earnings": r["days_to_earnings"],
             "short": hist.get(t, 0) < short_days,
             "note": confidence_note(r["p_up"], level, ew, hist.get(t, 0) < short_days, stale),
         })
@@ -146,8 +148,25 @@ def main():
     print(f"\nAverage P(up) across all stocks: {out['p_up'].mean():.0%}. Predictions move together, "
           "so they are partly a single market call.")
 
+    # --------------------------------------------------- Simple view (beginners)
+    hstats = simple.history_stats(prices, pool)
+    future = pd.bdate_range(last_market_day, periods=80)
+    cards = [simple.stock_card(r["ticker"], prices[r["ticker"]]["Close"], r, hstats, r["holding"], r["short"],
+                               lambda n: future[min(n, len(future) - 1)].strftime("%b %-d"))
+             for _, r in out.iterrows()]
+    # Holdings first, then uptrends before downtrends, newest trends last
+    order = {t: i for i, t in enumerate(holdings)}
+    cards.sort(key=lambda c: (order.get(c["ticker"], 99), -c.get("trend", 0), c["ticker"]))
+    market = simple.market_weather(prices)
+    simple_md = simple.render_markdown(cards, market, hstats, asof, args.synthetic)
+    (ROOT / "docs").mkdir(exist_ok=True)
+    (ROOT / "docs" / "index.html").write_text(simple.render_html(
+        cards, market, hstats, asof, args.synthetic,
+        f"Direction model verdict: {b['verdict']['headline']}"))
+    print("Wrote docs/index.html (the phone page)")
+
     # ------------------------------------------------------------ LATEST.md
-    write_latest_md(out, b, asof, args.synthetic)
+    write_latest_md(out, b, asof, args.synthetic, simple_md)
 
     # ------------------------------------------------------- paper_log.csv
     append_log(out, b, asof)
@@ -162,9 +181,9 @@ def pct(x):
     return "n/a" if pd.isna(x) else f"{x:.0%}"
 
 
-def write_latest_md(out, b, asof, synthetic):
+def write_latest_md(out, b, asof, synthetic, simple_md=()):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    lines = [f"# Weekly move predictions, as of {asof} close", "",
+    lines = list(simple_md) + ["---", "", f"# Details for the curious: model numbers, {asof} close", "",
              f"_Generated {now}. Covers the next 5 trading days. Model: {b['primary_name']}, "
              f"trained {b['trained_on']}._", ""]
     if synthetic:

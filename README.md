@@ -12,6 +12,7 @@ It runs entirely on GitHub Actions, so you don't need a laptop. You read the res
 
 | What | Where |
 |---|---|
+| **Phone page: your stocks in plain English (start here)** | your GitHub Pages link (`https://<you>.github.io/<repo>/`) |
 | Today's predictions (holdings on top) | [`LATEST.md`](LATEST.md) |
 | Full test report with charts | your GitHub Pages link (`https://<you>.github.io/<repo>/`) |
 | Short report for the GitHub app | [`REPORT.md`](REPORT.md) |
@@ -162,6 +163,17 @@ Whichever direction model has the better walk-forward AUC is used for live predi
 - **Final exam.** Ideas are developed on data before 2025 and then graded once on 2025 onward.
   An idea is called an edge only if it passes both, so trying many ideas can't fool us by luck.
   LATEST.md shows each "beats peers" number with its exam result.
+
+### Version 3: the plain-English phone page
+`stockpred/simple.py` builds the home page (`docs/index.html`, refreshed every weekday) and the top of
+`LATEST.md`. For each stock it answers, using price history only:
+- **Which way is it heading?** The trend: 50-day average price above (uptrend) or below (downtrend) the
+  200-day average. This describes the present; it doesn't predict next week.
+- **How long might that last?** Among past trends in ~100 chip/tech stocks that had already lasted as long
+  as this one, how much longer they went on (middle case), and the share still going a month later.
+- **Is this week's move normal?** The last 5 days compared with the stock's usual weekly move.
+- **How wild is it?** Calm / Normal / Wild / Very wild, and roughly how fast a 10% swing can happen.
+- **Next week:** said plainly that nobody can call it, plus the likely price range.
 
 ### Offline self-test
 `python train.py --synthetic` runs the whole pipeline on fake random-walk prices, where the
